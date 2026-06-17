@@ -1,0 +1,97 @@
+version: '3'
+
+vars:
+  ADDR: '{{.ADDR | default "127.0.0.1:18080"}}'
+  CONFIG: '{{.CONFIG | default "configs/config.yaml"}}'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  run:
+    desc: Run xianhu-chaos server
+    cmds:
+      - go run ./cmd/server -config {{.CONFIG}}
+
+  test:
+    desc: Run all Go tests
+    cmds:
+      - go test ./...
+
+  fmt:
+    desc: Format Go source files
+    cmds:
+      - gofmt -w ./cmd ./internal
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  check:
+    desc: Format, vet, and test
+    cmds:
+      - task: fmt
+      - task: vet
+      - task: test
+
+  health:
+    desc: Check local server health
+    cmds:
+      - curl -sS http://{{.ADDR}}/health
+
+  ui:
+    desc: Print the Web UI URL
+    cmds:
+      - echo http://{{.ADDR}}/
+
+  login:
+    desc: Call Umember login mock
+    cmds:
+      - >-
+        curl -sS -X POST http://{{.ADDR}}/open/login
+        -H 'Content-Type: application/json'
+        -d '{"email":"test@example.com","password":"test"}'
+
+  detail:
+    desc: Call Meituan coupon detail success mock
+    cmds:
+      - >-
+        curl -sS 'http://{{.ADDR}}/open/user/meituan/coupon/detail?store_id=8674228&coupon_code=0109760017002'
+        -H 'Authorization: chaos-mock-token'
+
+  verify:
+    desc: Call Meituan coupon verify success mock
+    cmds:
+      - >-
+        curl -sS -X POST http://{{.ADDR}}/open/user/meituan/coupon/verify
+        -H 'Content-Type: application/json'
+        -H 'Authorization: chaos-mock-token'
+        -d '{"store_id":"8674228","coupon_code":"0109760017002"}'
+
+  detail-500:
+    desc: Trigger detail HTTP 500 by coupon code
+    cmds:
+      - >-
+        curl -i 'http://{{.ADDR}}/open/user/meituan/coupon/detail?store_id=8674228&coupon_code=DETAIL_500'
+
+  verify-false:
+    desc: Trigger verify_success=false by coupon code
+    cmds:
+      - >-
+        curl -sS -X POST http://{{.ADDR}}/open/user/meituan/coupon/verify
+        -H 'Content-Type: application/json'
+        -H 'Authorization: chaos-mock-token'
+        -d '{"store_id":"8674228","coupon_code":"VERIFY_FALSE"}'
+
+  state:
+    desc: Inspect admin state
+    cmds:
+      - curl -sS http://{{.ADDR}}/__admin/state
+
+  reset:
+    desc: Reset admin state
+    cmds:
+      - curl -sS -X POST http://{{.ADDR}}/__admin/reset

@@ -1,0 +1,10 @@
+{
+  "code": 10000,
+  "msg": "success",
+  "data": {
+    "id": 173,
+    "username": "chaos"
+  },
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}

@@ -1,0 +1,46 @@
+{
+  "code": 10000,
+  "msg": "Success",
+  "data": {
+    "coupon_channel": "meituan",
+    "coupon_code": "0109760017002",
+    "order_id": "CHAOSORDER001",
+    "price": 59.9,
+    "rawData": {
+      "bizType": 0,
+      "count": 1,
+      "dealGroupId": 1349572011,
+      "dealId": 1394185271,
+      "dealMarketPrice": 79,
+      "dealPrice": 59.9,
+      "dealTitle": "中包4小时 乐享包 全天可用",
+      "dealType": "0",
+      "merchantAmount": "0",
+      "mobile": "151****9212",
+      "paymentDetail": [
+        {
+          "amount": "59.88",
+          "amountType": 10,
+          "paymentDetailId": "CHAOSORDER001"
+        },
+        {
+          "amount": "0.02",
+          "amountType": 6,
+          "paymentDetailId": "CHAOSORDER002"
+        }
+      ],
+      "platformAmount": "0.02",
+      "receiptCode": "0109760017002",
+      "receiptEndDate": 1781193599000,
+      "tgTimesCardFlag": false,
+      "ticketInfo": "chaos-ticket",
+      "verificationType": 1
+    },
+    "sku_id": "1349572011",
+    "sku_name": "中包4小时 乐享包 全天可用[59.9元][1349572011]",
+    "status": "未使用",
+    "status_code": 0
+  },
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}

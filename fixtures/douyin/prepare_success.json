@@ -1,0 +1,46 @@
+{
+  "data": {
+    "certificates": [
+      {
+        "amount": {
+          "brand_ticket_amount": 0,
+          "coupon_pay_amount": 4590,
+          "list_market_amount": 12700,
+          "merchant_ticket_amount": 0,
+          "original_amount": 4590,
+          "pay_amount": 4590
+        },
+        "book_info": {
+          "book_poi_id": "0"
+        },
+        "certificate_id": 7560254070939566118,
+        "encrypted_code": "chaos-encrypted-code",
+        "expire_time": 1781668800,
+        "sku": {
+          "account_id": "7504912744882161683",
+          "groupon_type": 1,
+          "market_price": 12700,
+          "sku_id": "1832328480732172",
+          "sold_start_time": 1749275574,
+          "third_sku_id": "128",
+          "title": "小包4小时棋牌套餐"
+        },
+        "start_time": 1760258800,
+        "use_time_info": {
+          "use_time_type": 1
+        }
+      }
+    ],
+    "certificates_v2": [],
+    "order_id": "CHAOSDYORDER001",
+    "verify_token": "chaos-verify-token",
+    "error_code": 0,
+    "description": "success"
+  },
+  "extra": {
+    "error_code": 0,
+    "description": "success",
+    "logid": "chaos-logid",
+    "now": 1781668800
+  }
+}

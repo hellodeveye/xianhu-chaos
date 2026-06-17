@@ -1,0 +1,25 @@
+{
+  "code": 10000,
+  "msg": "Success",
+  "data": {
+    "coupon_channel": "meituan",
+    "coupon_code": "0109760017002",
+    "order_id": "CHAOSORDER003",
+    "price": 59.9,
+    "rawData": {
+      "paymentDetail": [
+        {
+          "amount": "0.02",
+          "amountType": 6,
+          "paymentDetailId": "CHAOSORDER003"
+        }
+      ]
+    },
+    "sku_id": "1349572011",
+    "sku_name": "中包4小时 乐享包 全天可用[59.9元][1349572011]",
+    "status": "未使用",
+    "status_code": 0
+  },
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}

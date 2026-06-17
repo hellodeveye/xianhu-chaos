@@ -1,0 +1,225 @@
+{
+  "name": "umember",
+  "enabled": true,
+  "basePath": "/",
+  "routes": [
+    {
+      "id": "login",
+      "method": "POST",
+      "path": "/open/login",
+      "defaultScenario": "login_success"
+    },
+    {
+      "id": "meituan_coupon_detail",
+      "method": "GET",
+      "path": "/open/user/meituan/coupon/detail",
+      "defaultScenario": "detail_success",
+      "codeParam": "coupon_code"
+    },
+    {
+      "id": "meituan_coupon_verify",
+      "method": "POST",
+      "path": "/open/user/meituan/coupon/verify",
+      "defaultScenario": "verify_success",
+      "codeParam": "coupon_code"
+    },
+    {
+      "id": "meituan_store_list",
+      "method": "GET",
+      "path": "/open/user/meituan/store/list",
+      "defaultScenario": "store_list_success"
+    },
+    {
+      "id": "user_detail",
+      "method": "GET",
+      "path": "/open/user/detail",
+      "defaultScenario": "account_success"
+    },
+    {
+      "id": "meituan_auth_qr_code",
+      "method": "POST",
+      "path": "/open/user/meituan/auth/qr/code",
+      "defaultScenario": "qr_code_success"
+    },
+    {
+      "id": "request_logs",
+      "method": "POST",
+      "path": "/open/user/request/logs",
+      "defaultScenario": "request_logs_success"
+    },
+    {
+      "id": "order_count_create",
+      "method": "POST",
+      "path": "/open/user/order/count/create",
+      "defaultScenario": "order_create_success"
+    }
+  ],
+  "scenarios": {
+    "login_success": {
+      "status": 200,
+      "fixture": "fixtures/umember/login_success.json"
+    },
+    "login_http_500": {
+      "status": 500,
+      "fixture": "fixtures/umember/http_500.json"
+    },
+    "login_business_fail": {
+      "status": 200,
+      "fixture": "fixtures/umember/business_fail.json"
+    },
+    "login_bad_json": {
+      "status": 200,
+      "fixture": "fixtures/umember/bad_json.txt",
+      "contentType": "application/json"
+    },
+    "login_missing_token": {
+      "status": 200,
+      "fixture": "fixtures/umember/login_missing_token.json"
+    },
+    "detail_success": {
+      "status": 200,
+      "fixture": "fixtures/umember/detail_success.json"
+    },
+    "detail_http_500": {
+      "status": 500,
+      "fixture": "fixtures/umember/http_500.json"
+    },
+    "detail_business_fail": {
+      "status": 200,
+      "fixture": "fixtures/umember/business_fail.json"
+    },
+    "detail_bad_json": {
+      "status": 200,
+      "fixture": "fixtures/umember/bad_json.txt",
+      "contentType": "application/json"
+    },
+    "detail_missing_data": {
+      "status": 200,
+      "fixture": "fixtures/umember/detail_missing_data.json"
+    },
+    "detail_missing_payment": {
+      "status": 200,
+      "fixture": "fixtures/umember/detail_missing_payment.json"
+    },
+    "detail_unknown_sku": {
+      "status": 200,
+      "fixture": "fixtures/umember/detail_unknown_sku.json"
+    },
+    "verify_success": {
+      "status": 200,
+      "fixture": "fixtures/umember/verify_success.json"
+    },
+    "verify_http_500": {
+      "status": 500,
+      "fixture": "fixtures/umember/http_500.json"
+    },
+    "verify_business_fail": {
+      "status": 200,
+      "fixture": "fixtures/umember/business_fail.json"
+    },
+    "verify_false": {
+      "status": 200,
+      "fixture": "fixtures/umember/verify_false.json"
+    },
+    "verify_bad_json": {
+      "status": 200,
+      "fixture": "fixtures/umember/bad_json.txt",
+      "contentType": "application/json"
+    },
+    "verify_missing_consume_details": {
+      "status": 200,
+      "fixture": "fixtures/umember/verify_missing_consume_details.json"
+    },
+    "store_list_success": {
+      "status": 200,
+      "fixture": "fixtures/umember/store_list_success.json"
+    },
+    "account_success": {
+      "status": 200,
+      "fixture": "fixtures/umember/account_success.json"
+    },
+    "qr_code_success": {
+      "status": 200,
+      "fixture": "fixtures/umember/qr_code_success.json"
+    },
+    "request_logs_success": {
+      "status": 200,
+      "fixture": "fixtures/umember/request_logs_success.json"
+    },
+    "order_create_success": {
+      "status": 200,
+      "fixture": "fixtures/umember/order_create_success.json"
+    },
+    "slow_2s": {
+      "status": 200,
+      "fixture": "fixtures/umember/detail_success.json",
+      "delayMs": 2000
+    },
+    "jitter": {
+      "status": 200,
+      "fixture": "fixtures/umember/detail_success.json",
+      "jitterMs": 800
+    },
+    "random_http_500": {
+      "status": 500,
+      "fixture": "fixtures/umember/http_500.json",
+      "errorRate": 0.5
+    },
+    "third_request_http_500": {
+      "status": 500,
+      "fixture": "fixtures/umember/http_500.json",
+      "failOnNth": 3
+    }
+  },
+  "rules": [
+    {
+      "name": "coupon code triggers detail 500",
+      "match": {
+        "code": "DETAIL_500"
+      },
+      "scenario": "detail_http_500"
+    },
+    {
+      "name": "coupon code triggers detail business failure",
+      "match": {
+        "code": "DETAIL_FAIL"
+      },
+      "scenario": "detail_business_fail"
+    },
+    {
+      "name": "coupon code triggers malformed detail response",
+      "match": {
+        "code": "DETAIL_BAD_JSON"
+      },
+      "scenario": "detail_bad_json"
+    },
+    {
+      "name": "coupon code triggers unknown sku",
+      "match": {
+        "code": "UNKNOWN_SKU"
+      },
+      "scenario": "detail_unknown_sku"
+    },
+    {
+      "name": "coupon code triggers verify false",
+      "match": {
+        "code": "VERIFY_FALSE"
+      },
+      "scenario": "verify_false"
+    },
+    {
+      "name": "coupon code triggers verify 500",
+      "match": {
+        "code": "VERIFY_500"
+      },
+      "scenario": "verify_http_500"
+    },
+    {
+      "name": "coupon code triggers verify business failure",
+      "match": {
+        "code": "VERIFY_FAIL"
+      },
+      "scenario": "verify_business_fail"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "code": 10000,
+  "msg": "Success",
+  "data": {
+    "coupon_channel": "meituan",
+    "coupon_code": "0109760017002",
+    "order_id": "CHAOSORDER004",
+    "price": 59.9,
+    "rawData": {
+      "paymentDetail": [
+        {
+          "amount": "59.88",
+          "amountType": 10,
+          "paymentDetailId": "CHAOSORDER004"
+        }
+      ]
+    },
+    "sku_id": "9999999999",
+    "sku_name": "chaos unknown sku",
+    "status": "未使用",
+    "status_code": 0
+  },
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}

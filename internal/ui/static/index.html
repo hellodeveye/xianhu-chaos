@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>xianhu-chaos</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>xianhu-chaos</h1>
+        <p>Provider scenarios, live requests, and quick probes for local third-party mocks.</p>
+      </div>
+      <div class="topbar-actions">
+        <span id="healthBadge" class="status-pill neutral">checking</span>
+        <button id="refreshButton" class="button secondary" type="button">Refresh</button>
+        <button id="resetButton" class="button danger" type="button">Reset state</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel providers-panel" aria-labelledby="providersTitle">
+        <div class="panel-header">
+          <div>
+            <h2 id="providersTitle">Providers</h2>
+            <p>Set provider-wide scenarios. Header and coupon-code rules still take precedence.</p>
+          </div>
+        </div>
+        <div id="providersList" class="providers-list skeleton-list" aria-live="polite"></div>
+      </section>
+
+      <section class="panel probe-panel" aria-labelledby="probeTitle">
+        <div class="panel-header">
+          <div>
+            <h2 id="probeTitle">Quick probe</h2>
+            <p>Send common Umember requests without leaving the console.</p>
+          </div>
+        </div>
+        <form id="probeForm" class="probe-form">
+          <label>
+            Request
+            <select id="probePreset" name="preset"></select>
+          </label>
+          <label>
+            Coupon code
+            <input id="couponCode" name="couponCode" value="0109760017002" autocomplete="off">
+          </label>
+          <label>
+            Scenario header
+            <select id="scenarioHeader" name="scenarioHeader">
+              <option value="">none</option>
+            </select>
+          </label>
+          <button class="button primary" type="submit">Send request</button>
+        </form>
+        <div class="response-block">
+          <div class="response-meta">
+            <span id="responseStatus">No request yet</span>
+            <button id="copyResponseButton" class="text-button" type="button">Copy response</button>
+          </div>
+          <pre id="responseBody">{}</pre>
+        </div>
+      </section>
+
+      <section class="panel log-panel" aria-labelledby="logTitle">
+        <div class="panel-header">
+          <div>
+            <h2 id="logTitle">Recent requests</h2>
+            <p>The latest mock traffic captured by the server.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Provider</th>
+                <th>Route</th>
+                <th>Scenario</th>
+                <th>Status</th>
+                <th>Code</th>
+              </tr>
+            </thead>
+            <tbody id="requestRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

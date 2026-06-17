@@ -1,0 +1,15 @@
+{
+  "code": 10000,
+  "msg": "success",
+  "data": {
+    "email": "chaos@example.com",
+    "id": 173,
+    "phone": "15353569529",
+    "request_count": 9999,
+    "status": 1,
+    "status_text": "启用",
+    "username": "chaos"
+  },
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}

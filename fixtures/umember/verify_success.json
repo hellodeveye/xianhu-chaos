@@ -1,0 +1,20 @@
+{
+  "code": 10000,
+  "msg": "success",
+  "data": {
+    "consume_details": [
+      {
+        "amount": "￥59.9",
+        "amountName": "消费金额",
+        "amountSubName": "",
+        "hasPayment": false
+      }
+    ],
+    "coupon_channel": "meituan",
+    "coupon_code": "0109760017002",
+    "verify_message": "验证成功",
+    "verify_success": true
+  },
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}

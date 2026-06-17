@@ -1,0 +1,24 @@
+{
+  "data": {
+    "verify_results": [
+      {
+        "account_id": "7504912744882161683",
+        "certificate_id": "7560254070939566118",
+        "code": "chaos-encrypted-code",
+        "msg": "履约成功",
+        "order_id": "CHAOSDYORDER001",
+        "origin_code": "106298446693890",
+        "result": 0,
+        "verify_id": "CHAOSVERIFY001"
+      }
+    ],
+    "error_code": 0,
+    "description": "success"
+  },
+  "extra": {
+    "error_code": 0,
+    "description": "success",
+    "logid": "chaos-logid",
+    "now": 1781668800
+  }
+}

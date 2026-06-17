@@ -1,0 +1,10 @@
+{
+  "code": 1,
+  "msg": "success",
+  "data": {
+    "admin_name": "chaos",
+    "admin_phone_number": "13800138000",
+    "order_no": "CHAOS20260617120000",
+    "wx_pay_qr_code_url": "https://api.umember.cn/wx/startapp?path=recharge&channel=scan&orderNo=CHAOS20260617120000"
+  }
+}

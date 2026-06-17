@@ -1,0 +1,16 @@
+{
+  "code": 10000,
+  "msg": "success",
+  "data": [
+    {
+      "api_name": "核销验券",
+      "coupon_code": "0109760017002",
+      "created_at": "2026-06-17 12:00:00",
+      "store_id": 8674228,
+      "store_name": "大声發(20号店)",
+      "coupon_channel": "meituan"
+    }
+  ],
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}

@@ -1,0 +1,41 @@
+{
+  "name": "douyin",
+  "enabled": false,
+  "basePath": "/",
+  "routes": [
+    {
+      "id": "client_token",
+      "method": "POST",
+      "path": "/oauth/client_token/",
+      "defaultScenario": "token_success"
+    },
+    {
+      "id": "certificate_prepare",
+      "method": "GET",
+      "path": "/goodlife/v1/fulfilment/certificate/prepare/",
+      "defaultScenario": "prepare_success",
+      "codeParam": "code"
+    },
+    {
+      "id": "certificate_verify",
+      "method": "POST",
+      "path": "/goodlife/v1/fulfilment/certificate/verify/",
+      "defaultScenario": "verify_success"
+    }
+  ],
+  "scenarios": {
+    "token_success": {
+      "status": 200,
+      "fixture": "fixtures/douyin/token_success.json"
+    },
+    "prepare_success": {
+      "status": 200,
+      "fixture": "fixtures/douyin/prepare_success.json"
+    },
+    "verify_success": {
+      "status": 200,
+      "fixture": "fixtures/douyin/verify_success.json"
+    }
+  },
+  "rules": []
+}

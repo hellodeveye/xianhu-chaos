@@ -1,0 +1,12 @@
+{
+  "code": 10000,
+  "msg": "success",
+  "data": {
+    "access_token": "",
+    "qrcode": "{\"accessToken\":\"\",\"uuid\":\"chaos-uuid\",\"uniqueId\":\"chaos-unique-id\"}",
+    "unique_id": "chaos-unique-id",
+    "uuid": "chaos-uuid"
+  },
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}

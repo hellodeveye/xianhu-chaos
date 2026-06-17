@@ -1,0 +1,14 @@
+{
+  "data": {
+    "access_token": "chaos-douyin-token",
+    "description": "success",
+    "error_code": 0,
+    "expires_in": 7200
+  },
+  "extra": {
+    "error_code": 0,
+    "description": "success",
+    "logid": "chaos-logid",
+    "now": 1781668800
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "code": 10000,
+  "msg": "success",
+  "data": [
+    {
+      "store_id": 8674228,
+      "store_name": "大声發(20号店)",
+      "coupon_channel": "meituan"
+    },
+    {
+      "store_id": 8676210,
+      "store_name": "大声發(21号店)",
+      "coupon_channel": "meituan"
+    }
+  ],
+  "count": 2,
+  "date_time": "2026-06-17 12:00:00"
+}

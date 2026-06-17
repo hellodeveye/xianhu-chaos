@@ -1,0 +1,7 @@
+{
+  "server": {
+    "addr": ":18080"
+  },
+  "providersDir": "configs/providers",
+  "requestLogLimit": 100
+}

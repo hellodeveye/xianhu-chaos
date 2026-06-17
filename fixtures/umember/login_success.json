@@ -1,0 +1,14 @@
+{
+  "code": 10000,
+  "msg": "success",
+  "data": {
+    "id": 173,
+    "openid": "",
+    "phone": "15353569529",
+    "sessionKey": "",
+    "token": "chaos-mock-token",
+    "username": "chaos"
+  },
+  "count": 1,
+  "date_time": "2026-06-17 12:00:00"
+}
