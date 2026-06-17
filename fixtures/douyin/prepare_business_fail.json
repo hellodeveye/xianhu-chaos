@@ -1,0 +1,14 @@
+{
+  "data": {
+    "error_code": 2190008,
+    "description": "券码无效或不属于当前门店"
+  },
+  "extra": {
+    "error_code": 2190008,
+    "description": "券码无效或不属于当前门店",
+    "sub_error_code": 0,
+    "sub_description": "",
+    "logid": "chaos-logid",
+    "now": 1781668800
+  }
+}

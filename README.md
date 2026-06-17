@@ -2,7 +2,7 @@
 
 `xianhu-chaos` is a local chaos mock platform for Xianhu third-party integrations.
 
-V1 focuses on the Umember/Meituan coupon APIs used by `MtCouponUtils`. The project is structured so Douyin, payment, and IoT providers can be added as separate provider manifests later.
+V1 covers the Umember/Meituan coupon APIs used by `MtCouponUtils` and the Douyin coupon APIs used by `DyCouponUtils`. The project is structured so payment and IoT providers can be added as separate provider manifests later.
 
 ## Run
 
@@ -29,7 +29,7 @@ Web console:
 http://127.0.0.1:18080/
 ```
 
-The console can set provider-wide scenarios, send common Umember requests, inspect recent mock traffic, and reset runtime state.
+The console can set provider-wide scenarios, send common Umember/Douyin requests, inspect recent mock traffic, and reset runtime state.
 
 ## Connect xianhu-server
 
@@ -44,6 +44,16 @@ app:
 Keep the trailing `/`. `MtCouponUtils` builds URLs by concatenating `baseUrl + "open/login"`.
 
 The default successful coupon detail uses `sku_id=1349572011`, which exists in the current test SQL for Meituan group-buying coupon plans.
+
+Point Douyin to the same service:
+
+```yaml
+app:
+  douyin:
+    base-url: http://127.0.0.1:18080/
+```
+
+`DyCouponUtils` builds URLs from this base URL for token, prepare, and verify APIs.
 
 ## Provider Manifests
 
@@ -104,7 +114,29 @@ Trigger verify failure by coupon code:
 curl -sS -X POST http://127.0.0.1:18080/open/user/meituan/coupon/verify \
   -H 'Content-Type: application/json' \
   -H 'Authorization: chaos-mock-token' \
-  -d '{"store_id":"8674228","coupon_code":"VERIFY_FALSE"}'
+        -d '{"store_id":"8674228","coupon_code":"VERIFY_FALSE"}'
+```
+
+Successful Douyin token:
+
+```bash
+curl -sS -X POST http://127.0.0.1:18080/oauth/client_token/ \
+  -H 'Content-Type: application/json' \
+  -d '{"client_key":"chaos-client-key","client_secret":"chaos-client-secret","grant_type":"client_credential"}'
+```
+
+Successful Douyin prepare:
+
+```bash
+curl -sS 'http://127.0.0.1:18080/goodlife/v1/fulfilment/certificate/prepare/?poi_id=7630290236999731263&code=102692315741346'
+```
+
+Successful Douyin verify:
+
+```bash
+curl -sS -X POST http://127.0.0.1:18080/goodlife/v1/fulfilment/certificate/verify/ \
+  -H 'Content-Type: application/json' \
+  -d '{"verify_token":"chaos-verify-token","poi_id":"7630290236999731263","encrypted_codes":["chaos-encrypted-code"]}'
 ```
 
 Force one request with a header:
@@ -134,12 +166,28 @@ Inspect state:
 curl -sS http://127.0.0.1:18080/__admin/state
 ```
 
-## Douyin Status
+## Douyin Scenarios
 
-`configs/providers/douyin.yaml` is included as a disabled template with fixtures for:
+`configs/providers/douyin.yaml` is enabled by default and mocks:
 
 - `POST /oauth/client_token/`
 - `GET /goodlife/v1/fulfilment/certificate/prepare/`
 - `POST /goodlife/v1/fulfilment/certificate/verify/`
 
-`DyCouponUtils` currently hardcodes `https://open.douyin.com/...`, so xianhu-server needs a later Java-side base URL configuration before it can use this provider directly.
+Useful prepare coupon codes:
+
+- `DY_PREPARE_500`: prepare returns HTTP 500
+- `DY_PREPARE_FAIL`: prepare returns Douyin business failure
+- `DY_PREPARE_BAD_JSON`: prepare returns malformed JSON
+- `DY_EMPTY`: prepare returns no certificates
+- `DY_MISSING_DATA`: prepare omits `data`
+- `DY_UNKNOWN_SKU`: prepare returns an unknown `third_sku_id`
+- `DY_VERIFY_FAIL`: prepare succeeds, then verify returns `券码已核销`
+- `DY_VERIFY_500`: prepare succeeds, then verify returns HTTP 500
+- `DY_VERIFY_BAD_JSON`: prepare succeeds, then verify returns malformed JSON
+
+Useful verify tokens:
+
+- `DY_VERIFY_FAIL_TOKEN`: verify returns `券码已核销`
+- `DY_VERIFY_500_TOKEN`: verify returns HTTP 500
+- `DY_VERIFY_BAD_JSON_TOKEN`: verify returns malformed JSON

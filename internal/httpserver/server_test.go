@@ -110,6 +110,49 @@ func TestHeaderScenarioTakesPrecedence(t *testing.T) {
 	}
 }
 
+func TestDouyinDefaultToken(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	resp, err := http.Post(ts.URL+"/oauth/client_token/", "application/json", strings.NewReader(`{"client_key":"x","client_secret":"y","grant_type":"client_credential"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("douyin token status = %d body=%s", resp.StatusCode, body)
+	}
+	if !strings.Contains(string(body), "chaos-douyin-token") {
+		t.Fatalf("douyin token missing: %s", body)
+	}
+}
+
+func TestDouyinPrepareRuleCanDriveVerifyFailure(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/goodlife/v1/fulfilment/certificate/prepare/?poi_id=7630290236999731263&code=DY_VERIFY_FAIL")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(body), `"verify_token": "DY_VERIFY_FAIL_TOKEN"`) {
+		t.Fatalf("prepare fixture did not return verify failure token: %s", body)
+	}
+
+	resp, err = http.Post(ts.URL+"/goodlife/v1/fulfilment/certificate/verify/", "application/json", strings.NewReader(`{"verify_token":"DY_VERIFY_FAIL_TOKEN","poi_id":"7630290236999731263","encrypted_codes":["chaos-verify-fail-code"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ = io.ReadAll(resp.Body)
+	if !strings.Contains(string(body), `"msg": "券码已核销"`) {
+		t.Fatalf("verify failure fixture not selected: %s", body)
+	}
+}
+
 func TestAdminSetsGlobalScenario(t *testing.T) {
 	ts := newTestServer(t)
 	defer ts.Close()

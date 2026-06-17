@@ -1,6 +1,6 @@
 {
   "name": "douyin",
-  "enabled": false,
+  "enabled": true,
   "basePath": "/",
   "routes": [
     {
@@ -20,7 +20,8 @@
       "id": "certificate_verify",
       "method": "POST",
       "path": "/goodlife/v1/fulfilment/certificate/verify/",
-      "defaultScenario": "verify_success"
+      "defaultScenario": "verify_success",
+      "codeParam": "verify_token"
     }
   ],
   "scenarios": {
@@ -28,14 +29,189 @@
       "status": 200,
       "fixture": "fixtures/douyin/token_success.json"
     },
+    "token_http_500": {
+      "status": 500,
+      "fixture": "fixtures/douyin/http_500.json"
+    },
+    "token_business_fail": {
+      "status": 200,
+      "fixture": "fixtures/douyin/token_business_fail.json"
+    },
+    "token_bad_json": {
+      "status": 200,
+      "fixture": "fixtures/douyin/bad_json.txt",
+      "contentType": "application/json"
+    },
     "prepare_success": {
       "status": 200,
       "fixture": "fixtures/douyin/prepare_success.json"
     },
+    "prepare_http_500": {
+      "status": 500,
+      "fixture": "fixtures/douyin/http_500.json"
+    },
+    "prepare_business_fail": {
+      "status": 200,
+      "fixture": "fixtures/douyin/prepare_business_fail.json"
+    },
+    "prepare_bad_json": {
+      "status": 200,
+      "fixture": "fixtures/douyin/bad_json.txt",
+      "contentType": "application/json"
+    },
+    "prepare_empty_certificates": {
+      "status": 200,
+      "fixture": "fixtures/douyin/prepare_empty_certificates.json"
+    },
+    "prepare_missing_data": {
+      "status": 200,
+      "fixture": "fixtures/douyin/missing_data.json"
+    },
+    "prepare_unknown_sku": {
+      "status": 200,
+      "fixture": "fixtures/douyin/prepare_unknown_sku.json"
+    },
+    "prepare_verify_fail_token": {
+      "status": 200,
+      "fixture": "fixtures/douyin/prepare_verify_fail_token.json"
+    },
+    "prepare_verify_500_token": {
+      "status": 200,
+      "fixture": "fixtures/douyin/prepare_verify_500_token.json"
+    },
+    "prepare_verify_bad_json_token": {
+      "status": 200,
+      "fixture": "fixtures/douyin/prepare_verify_bad_json_token.json"
+    },
     "verify_success": {
       "status": 200,
       "fixture": "fixtures/douyin/verify_success.json"
+    },
+    "verify_http_500": {
+      "status": 500,
+      "fixture": "fixtures/douyin/http_500.json"
+    },
+    "verify_business_fail": {
+      "status": 200,
+      "fixture": "fixtures/douyin/verify_business_fail.json"
+    },
+    "verify_failed": {
+      "status": 200,
+      "fixture": "fixtures/douyin/verify_failed.json"
+    },
+    "verify_refunding": {
+      "status": 200,
+      "fixture": "fixtures/douyin/verify_refunding.json"
+    },
+    "verify_empty_results": {
+      "status": 200,
+      "fixture": "fixtures/douyin/verify_empty_results.json"
+    },
+    "verify_bad_json": {
+      "status": 200,
+      "fixture": "fixtures/douyin/bad_json.txt",
+      "contentType": "application/json"
+    },
+    "slow_2s": {
+      "status": 200,
+      "fixture": "fixtures/douyin/prepare_success.json",
+      "delayMs": 2000
+    },
+    "random_http_500": {
+      "status": 500,
+      "fixture": "fixtures/douyin/http_500.json",
+      "errorRate": 0.5
+    },
+    "third_request_http_500": {
+      "status": 500,
+      "fixture": "fixtures/douyin/http_500.json",
+      "failOnNth": 3
     }
   },
-  "rules": []
+  "rules": [
+    {
+      "name": "coupon code triggers prepare 500",
+      "match": {
+        "code": "DY_PREPARE_500"
+      },
+      "scenario": "prepare_http_500"
+    },
+    {
+      "name": "coupon code triggers prepare business failure",
+      "match": {
+        "code": "DY_PREPARE_FAIL"
+      },
+      "scenario": "prepare_business_fail"
+    },
+    {
+      "name": "coupon code triggers malformed prepare response",
+      "match": {
+        "code": "DY_PREPARE_BAD_JSON"
+      },
+      "scenario": "prepare_bad_json"
+    },
+    {
+      "name": "coupon code triggers empty certificates",
+      "match": {
+        "code": "DY_EMPTY"
+      },
+      "scenario": "prepare_empty_certificates"
+    },
+    {
+      "name": "coupon code triggers missing data",
+      "match": {
+        "code": "DY_MISSING_DATA"
+      },
+      "scenario": "prepare_missing_data"
+    },
+    {
+      "name": "coupon code triggers unknown sku",
+      "match": {
+        "code": "DY_UNKNOWN_SKU"
+      },
+      "scenario": "prepare_unknown_sku"
+    },
+    {
+      "name": "coupon code triggers verify failure after prepare",
+      "match": {
+        "code": "DY_VERIFY_FAIL"
+      },
+      "scenario": "prepare_verify_fail_token"
+    },
+    {
+      "name": "coupon code triggers verify 500 after prepare",
+      "match": {
+        "code": "DY_VERIFY_500"
+      },
+      "scenario": "prepare_verify_500_token"
+    },
+    {
+      "name": "coupon code triggers malformed verify response after prepare",
+      "match": {
+        "code": "DY_VERIFY_BAD_JSON"
+      },
+      "scenario": "prepare_verify_bad_json_token"
+    },
+    {
+      "name": "verify token triggers verify failure",
+      "match": {
+        "code": "DY_VERIFY_FAIL_TOKEN"
+      },
+      "scenario": "verify_failed"
+    },
+    {
+      "name": "verify token triggers verify 500",
+      "match": {
+        "code": "DY_VERIFY_500_TOKEN"
+      },
+      "scenario": "verify_http_500"
+    },
+    {
+      "name": "verify token triggers malformed verify response",
+      "match": {
+        "code": "DY_VERIFY_BAD_JSON_TOKEN"
+      },
+      "scenario": "verify_bad_json"
+    }
+  ]
 }

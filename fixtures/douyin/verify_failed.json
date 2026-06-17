@@ -1,0 +1,24 @@
+{
+  "data": {
+    "verify_results": [
+      {
+        "account_id": "7504912744882161683",
+        "certificate_id": "7560254070939570001",
+        "code": "chaos-verify-fail-code",
+        "msg": "券码已核销",
+        "order_id": "CHAOSDYORDERVERIFYFAIL",
+        "origin_code": "106298446693890",
+        "result": 2,
+        "verify_id": ""
+      }
+    ],
+    "error_code": 0,
+    "description": "success"
+  },
+  "extra": {
+    "error_code": 0,
+    "description": "success",
+    "logid": "chaos-logid",
+    "now": 1781668800
+  }
+}

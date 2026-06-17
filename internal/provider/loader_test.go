@@ -14,8 +14,8 @@ func TestLoadRegistryLoadsEnabledProviderRoutes(t *testing.T) {
 	if _, ok := reg.Providers["umember"]; !ok {
 		t.Fatalf("umember provider missing")
 	}
-	if reg.Providers["douyin"].Enabled {
-		t.Fatalf("douyin provider should be disabled in v1")
+	if provider, ok := reg.Providers["douyin"]; !ok || !provider.Enabled {
+		t.Fatalf("douyin provider should be enabled")
 	}
 	routes := reg.Routes["/open/login"]
 	if len(routes) != 1 {
@@ -23,6 +23,13 @@ func TestLoadRegistryLoadsEnabledProviderRoutes(t *testing.T) {
 	}
 	if routes[0].Provider != "umember" || routes[0].Method != "POST" {
 		t.Fatalf("unexpected route: %+v", routes[0])
+	}
+	douyinRoutes := reg.Routes["/oauth/client_token/"]
+	if len(douyinRoutes) != 1 {
+		t.Fatalf("expected one /oauth/client_token/ route, got %d", len(douyinRoutes))
+	}
+	if douyinRoutes[0].Provider != "douyin" || douyinRoutes[0].Method != "POST" {
+		t.Fatalf("unexpected douyin route: %+v", douyinRoutes[0])
 	}
 }
 

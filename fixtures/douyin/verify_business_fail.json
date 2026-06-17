@@ -1,0 +1,12 @@
+{
+  "data": {
+    "error_code": 2190010,
+    "description": "核销失败，门店无权限"
+  },
+  "extra": {
+    "error_code": 2190010,
+    "description": "核销失败，门店无权限",
+    "logid": "chaos-logid",
+    "now": 1781668800
+  }
+}

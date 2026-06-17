@@ -44,6 +44,34 @@ const presets = [
     path: '/open/user/request/logs',
     body: () => ({ page: 1, rows: 10 }),
   },
+  {
+    id: 'dy_token',
+    label: 'Douyin client token',
+    method: 'POST',
+    path: '/oauth/client_token/',
+    body: () => ({
+      client_key: 'chaos-client-key',
+      client_secret: 'chaos-client-secret',
+      grant_type: 'client_credential',
+    }),
+  },
+  {
+    id: 'dy_prepare',
+    label: 'Douyin certificate prepare',
+    method: 'GET',
+    path: ({ couponCode }) => `/goodlife/v1/fulfilment/certificate/prepare/?poi_id=7630290236999731263&code=${encodeURIComponent(couponCode)}`,
+  },
+  {
+    id: 'dy_verify',
+    label: 'Douyin certificate verify',
+    method: 'POST',
+    path: '/goodlife/v1/fulfilment/certificate/verify/',
+    body: ({ couponCode }) => ({
+      verify_token: couponCode || 'chaos-verify-token',
+      poi_id: '7630290236999731263',
+      encrypted_codes: ['chaos-encrypted-code'],
+    }),
+  },
 ];
 
 const els = {
@@ -151,9 +179,7 @@ function renderProvider(provider) {
 function renderScenarioHeaderOptions() {
   const scenarios = new Set();
   state.providers.forEach((provider) => {
-    if (provider.name === 'umember') {
-      (provider.scenarios || []).forEach((scenario) => scenarios.add(scenario));
-    }
+    (provider.scenarios || []).forEach((scenario) => scenarios.add(scenario));
   });
   const sorted = Array.from(scenarios).sort();
   els.scenarioHeader.innerHTML = '<option value="">none</option>' + sorted

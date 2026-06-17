@@ -86,6 +86,42 @@ tasks:
         -H 'Authorization: chaos-mock-token'
         -d '{"store_id":"8674228","coupon_code":"VERIFY_FALSE"}'
 
+  dy-token:
+    desc: Call Douyin client token mock
+    cmds:
+      - >-
+        curl -sS -X POST http://{{.ADDR}}/oauth/client_token/
+        -H 'Content-Type: application/json'
+        -d '{"client_key":"chaos-client-key","client_secret":"chaos-client-secret","grant_type":"client_credential"}'
+
+  dy-prepare:
+    desc: Call Douyin certificate prepare success mock
+    cmds:
+      - >-
+        curl -sS 'http://{{.ADDR}}/goodlife/v1/fulfilment/certificate/prepare/?poi_id=7630290236999731263&code=102692315741346'
+
+  dy-verify:
+    desc: Call Douyin certificate verify success mock
+    cmds:
+      - >-
+        curl -sS -X POST http://{{.ADDR}}/goodlife/v1/fulfilment/certificate/verify/
+        -H 'Content-Type: application/json'
+        -d '{"verify_token":"chaos-verify-token","poi_id":"7630290236999731263","encrypted_codes":["chaos-encrypted-code"]}'
+
+  dy-prepare-fail:
+    desc: Trigger Douyin prepare business failure by code
+    cmds:
+      - >-
+        curl -sS 'http://{{.ADDR}}/goodlife/v1/fulfilment/certificate/prepare/?poi_id=7630290236999731263&code=DY_PREPARE_FAIL'
+
+  dy-verify-fail:
+    desc: Trigger Douyin verify failure by token
+    cmds:
+      - >-
+        curl -sS -X POST http://{{.ADDR}}/goodlife/v1/fulfilment/certificate/verify/
+        -H 'Content-Type: application/json'
+        -d '{"verify_token":"DY_VERIFY_FAIL_TOKEN","poi_id":"7630290236999731263","encrypted_codes":["chaos-verify-fail-code"]}'
+
   state:
     desc: Inspect admin state
     cmds:
