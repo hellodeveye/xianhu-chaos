@@ -9,6 +9,7 @@ import (
 	"xianhu-chaos/internal/chaos"
 	"xianhu-chaos/internal/config"
 	"xianhu-chaos/internal/httpserver"
+	"xianhu-chaos/internal/logging"
 	"xianhu-chaos/internal/provider"
 )
 
@@ -16,7 +17,7 @@ func main() {
 	configPath := flag.String("config", "configs/config.yaml", "path to config file")
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	logger := slog.New(logging.NewColorHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
 	cfg, err := config.Load(*configPath)

@@ -31,6 +31,8 @@ http://127.0.0.1:18080/
 
 The console can set provider-wide scenarios, send common Umember/Douyin requests, inspect recent mock traffic, and reset runtime state.
 
+Console logs are colorized by default. Set `NO_COLOR=1` before starting the server if plain logs are needed for file redirection or CI output.
+
 ## Connect xianhu-server
 
 For local or test profile, point Umember to this service:
