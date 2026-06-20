@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,11 @@ func newTestServer(t *testing.T) *httptest.Server {
 	}
 	engine := chaos.New(reg, 20)
 	return httptest.NewServer(New(engine).Handler())
+}
+
+func jsonQuote(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
 }
 
 func TestHealthAndDefaultLogin(t *testing.T) {
@@ -178,5 +184,186 @@ func TestAdminSetsGlobalScenario(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("login status after global scenario = %d", resp.StatusCode)
+	}
+}
+
+func TestScenarioDetailReturnsFixtureBody(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/__admin/providers/umember/scenarios/login_success")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("detail status = %d", resp.StatusCode)
+	}
+	var detail struct {
+		Provider    string `json:"provider"`
+		Scenario    string `json:"scenario"`
+		Status      int    `json:"status"`
+		ContentType string `json:"contentType"`
+		Body        string `json:"body"`
+		HasOverride bool   `json:"hasOverride"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+		t.Fatal(err)
+	}
+	if detail.Provider != "umember" || detail.Scenario != "login_success" {
+		t.Fatalf("detail identity = %s/%s", detail.Provider, detail.Scenario)
+	}
+	if detail.Status != 200 {
+		t.Fatalf("detail status = %d, want 200", detail.Status)
+	}
+	if detail.HasOverride {
+		t.Fatalf("fresh engine detail should have no override")
+	}
+	if !strings.Contains(detail.Body, "chaos-mock-token") {
+		t.Fatalf("detail body should contain fixture token: %s", detail.Body)
+	}
+}
+
+func TestScenarioOverrideChangesProviderResponse(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	overrideBody := `{"overridden": true}`
+	payload := `{"status":500,"body":` + jsonQuote(overrideBody) + `}`
+	req, err := http.NewRequest(http.MethodPut, ts.URL+"/__admin/providers/umember/scenarios/login_success", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("override PUT status = %d", resp.StatusCode)
+	}
+
+	resp, err = http.Post(ts.URL+"/open/login", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("login status after override = %d, want 500", resp.StatusCode)
+	}
+	if string(body) != overrideBody {
+		t.Fatalf("login body after override = %s, want %s", body, overrideBody)
+	}
+}
+
+func TestScenarioOverrideRoutePrecedence(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	req, err := http.NewRequest(http.MethodPut, ts.URL+"/__admin/providers/umember/scenarios/login_success", strings.NewReader(`{"status":503,"body":"{}"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("PUT /scenarios/{scenario} should hit override handler, got status %d (route precedence bug)", resp.StatusCode)
+	}
+
+	detailResp, err := http.Get(ts.URL + "/__admin/providers/umember/scenarios/login_success")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer detailResp.Body.Close()
+	var detail struct {
+		HasOverride bool `json:"hasOverride"`
+		Overridden  *struct {
+			Status int `json:"status"`
+		} `json:"overridden"`
+	}
+	if err := json.NewDecoder(detailResp.Body).Decode(&detail); err != nil {
+		t.Fatal(err)
+	}
+	if !detail.HasOverride || detail.Overridden == nil || detail.Overridden.Status != 503 {
+		t.Fatalf("override not applied; hasOverride=%v overridden=%+v", detail.HasOverride, detail.Overridden)
+	}
+}
+
+func TestScenarioOverrideDeleteRestoresFixture(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	putReq, err := http.NewRequest(http.MethodPut, ts.URL+"/__admin/providers/umember/scenarios/login_success", strings.NewReader(`{"status":500,"body":"{}"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	putReq.Header.Set("Content-Type", "application/json")
+	putResp, err := http.DefaultClient.Do(putReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	putResp.Body.Close()
+
+	delReq, err := http.NewRequest(http.MethodDelete, ts.URL+"/__admin/providers/umember/scenarios/login_success", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	delResp, err := http.DefaultClient.Do(delReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer delResp.Body.Close()
+	if delResp.StatusCode != http.StatusOK {
+		t.Fatalf("DELETE override status = %d", delResp.StatusCode)
+	}
+
+	resp, err := http.Post(ts.URL+"/open/login", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		t.Fatalf("login status after delete override = %d, want 200", resp.StatusCode)
+	}
+	if !strings.Contains(string(body), "chaos-mock-token") {
+		t.Fatalf("login body after delete should be original fixture: %s", body)
+	}
+}
+
+func TestResetClearsScenarioOverrides(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	putReq, err := http.NewRequest(http.MethodPut, ts.URL+"/__admin/providers/umember/scenarios/login_success", strings.NewReader(`{"status":500,"body":"{}"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	putReq.Header.Set("Content-Type", "application/json")
+	putResp, err := http.DefaultClient.Do(putReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	putResp.Body.Close()
+
+	resetResp, err := http.Post(ts.URL+"/__admin/reset", "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resetResp.Body.Close()
+
+	resp, err := http.Post(ts.URL+"/open/login", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("login status after reset = %d, want 200 (override should be cleared)", resp.StatusCode)
 	}
 }

@@ -168,6 +168,30 @@ Inspect state:
 curl -sS http://127.0.0.1:18080/__admin/state
 ```
 
+## Scenario Overrides
+
+View a scenario's current response (fixture body + status + content type, plus any active override):
+
+```bash
+curl -sS http://127.0.0.1:18080/__admin/providers/umember/scenarios/login_success
+```
+
+Override a scenario's response in memory (body + status + contentType; any field optional, omitted fields keep the fixture value):
+
+```bash
+curl -sS -X PUT http://127.0.0.1:18080/__admin/providers/umember/scenarios/login_success \
+  -H 'Content-Type: application/json' \
+  -d '{"status":500,"body":"{\"overridden\":true}"}'
+```
+
+Restore a scenario to its fixture (clear the override):
+
+```bash
+curl -sS -X DELETE http://127.0.0.1:18080/__admin/providers/umember/scenarios/login_success
+```
+
+Overrides are in-memory only; they are cleared by `POST /__admin/reset` or server restart. The Web console also supports viewing and editing scenarios — click a scenario chip under any provider.
+
 ## Douyin Scenarios
 
 `configs/providers/douyin.yaml` is enabled by default and mocks:

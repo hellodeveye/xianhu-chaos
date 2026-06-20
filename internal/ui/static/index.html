@@ -31,8 +31,7 @@
         <div id="providersList" class="providers-list skeleton-list" aria-live="polite"></div>
       </section>
 
-      <section class="panel probe-panel" aria-labelledby="probeTitle">
-        <div class="panel-header">
+      <section class="panel probe-panel" aria-labelledby="probeTitle">        <div class="panel-header">
           <div>
             <h2 id="probeTitle">Quick probe</h2>
             <p>Send common Umember and Douyin requests without leaving the console.</p>
@@ -58,6 +57,7 @@
         <div class="response-block">
           <div class="response-meta">
             <span id="responseStatus">No request yet</span>
+            <button id="copyRequestButton" class="text-button" type="button">Copy request</button>
             <button id="copyResponseButton" class="text-button" type="button">Copy response</button>
           </div>
           <pre id="responseBody">{}</pre>
@@ -90,6 +90,44 @@
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <div id="scenarioModal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalTitle">Scenario</h2>
+          <p id="modalSubtitle" class="modal-subtitle"></p>
+        </div>
+        <button id="modalClose" class="text-button" type="button" aria-label="Close">x</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-status-row">
+          <label class="modal-field">
+            Status
+            <input id="modalStatus" type="number" min="100" max="599" autocomplete="off">
+          </label>
+          <label class="modal-field">
+            Content-Type
+            <input id="modalContentType" type="text" autocomplete="off">
+          </label>
+        </div>
+        <label class="modal-field">
+          Body
+          <textarea id="modalBody" rows="14" spellcheck="false" autocomplete="off"></textarea>
+        </label>
+        <div id="modalOverrideBadge" class="override-badge" hidden>
+          Overridden &mdash; fixture response is being shadowed.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modalReset" class="button danger" type="button" hidden>Reset to fixture</button>
+        <div class="modal-footer-spacer"></div>
+        <button id="modalCancel" class="button secondary" type="button">Close</button>
+        <button id="modalSave" class="button primary" type="button">Save override</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/static/app.js" defer></script>
 </body>
 </html>

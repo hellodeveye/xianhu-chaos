@@ -15,6 +15,18 @@ import (
 
 const ScenarioHeader = "X-Chaos-Scenario"
 
+type Override struct {
+	Status      int    `json:"status"`
+	ContentType string `json:"contentType"`
+	Body        []byte `json:"-"`
+	HasBody     bool   `json:"hasBody"`
+}
+
+type overrideKey struct {
+	Provider string
+	Scenario string
+}
+
 type Engine struct {
 	registry    *provider.Registry
 	logLimit    int
@@ -23,6 +35,7 @@ type Engine struct {
 	counts      map[string]int64
 	recent      []RequestLog
 	perProvider map[string]ProviderState
+	overrides   map[overrideKey]Override
 }
 
 type ProviderState struct {
@@ -51,6 +64,20 @@ type Selection struct {
 	Count        int64
 }
 
+type ScenarioDetail struct {
+	Provider    string `json:"provider"`
+	Scenario    string `json:"scenario"`
+	Status      int    `json:"status"`
+	ContentType string `json:"contentType"`
+	Body        string `json:"body"`
+	HasOverride bool   `json:"hasOverride"`
+	Overridden  *struct {
+		Status      int    `json:"status"`
+		ContentType string `json:"contentType"`
+		Body        string `json:"body"`
+	} `json:"overridden,omitempty"`
+}
+
 func New(reg *provider.Registry, logLimit int) *Engine {
 	if logLimit <= 0 {
 		logLimit = 100
@@ -61,6 +88,7 @@ func New(reg *provider.Registry, logLimit int) *Engine {
 		global:      make(map[string]string),
 		counts:      make(map[string]int64),
 		perProvider: make(map[string]ProviderState),
+		overrides:   make(map[overrideKey]Override),
 	}
 }
 
@@ -101,6 +129,15 @@ func (e *Engine) Select(r *http.Request, route provider.Route, body []byte) Sele
 	if scenario.FailOnNth > 0 && count != scenario.FailOnNth {
 		scenarioName = route.DefaultScenario
 		scenario = manifest.Scenarios[scenarioName]
+	}
+	if ov, ok := e.GetOverride(route.Provider, scenarioName); ok {
+		scenario.Status = ov.Status
+		if ov.ContentType != "" {
+			scenario.ContentType = ov.ContentType
+		}
+		if ov.HasBody {
+			scenario.Body = ov.Body
+		}
 	}
 
 	return Selection{
@@ -163,6 +200,39 @@ func (e *Engine) ProviderStates() []ProviderState {
 	return states
 }
 
+func (e *Engine) ScenarioDetail(providerName, scenarioName string) (ScenarioDetail, bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	manifest, ok := e.registry.Providers[providerName]
+	if !ok {
+		return ScenarioDetail{}, false
+	}
+	base, ok := manifest.Scenarios[scenarioName]
+	if !ok {
+		return ScenarioDetail{}, false
+	}
+	detail := ScenarioDetail{
+		Provider:    providerName,
+		Scenario:    scenarioName,
+		Status:      base.Status,
+		ContentType: base.ContentType,
+		Body:        string(base.Body),
+	}
+	if ov, ok := e.overrides[overrideKey{providerName, scenarioName}]; ok {
+		detail.HasOverride = true
+		detail.Overridden = &struct {
+			Status      int    `json:"status"`
+			ContentType string `json:"contentType"`
+			Body        string `json:"body"`
+		}{
+			Status:      ov.Status,
+			ContentType: ov.ContentType,
+			Body:        string(ov.Body),
+		}
+	}
+	return detail, true
+}
+
 func (e *Engine) RecentRequests() []RequestLog {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -195,12 +265,56 @@ func (e *Engine) SetGlobalScenario(providerName, scenarioName string) bool {
 	return true
 }
 
+func (e *Engine) GetOverride(providerName, scenarioName string) (Override, bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	ov, ok := e.overrides[overrideKey{providerName, scenarioName}]
+	return ov, ok
+}
+
+func (e *Engine) SetOverride(providerName, scenarioName string, ov Override) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	manifest, ok := e.registry.Providers[providerName]
+	if !ok {
+		return false
+	}
+	base, ok := manifest.Scenarios[scenarioName]
+	if !ok {
+		return false
+	}
+	if ov.Status == 0 {
+		ov.Status = base.Status
+	}
+	if ov.ContentType == "" {
+		ov.ContentType = base.ContentType
+	}
+	if !ov.HasBody {
+		ov.Body = base.Body
+		ov.HasBody = true
+	}
+	e.overrides[overrideKey{providerName, scenarioName}] = ov
+	return true
+}
+
+func (e *Engine) ClearOverride(providerName, scenarioName string) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	key := overrideKey{providerName, scenarioName}
+	if _, ok := e.overrides[key]; !ok {
+		return false
+	}
+	delete(e.overrides, key)
+	return true
+}
+
 func (e *Engine) Reset() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.global = make(map[string]string)
 	e.counts = make(map[string]int64)
 	e.recent = nil
+	e.overrides = make(map[overrideKey]Override)
 }
 
 func (e *Engine) increment(providerName, routeID, scenarioName string) int64 {

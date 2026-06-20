@@ -2,6 +2,7 @@ const state = {
   providers: [],
   recentRequests: [],
   lastResponse: '{}',
+  lastRequest: null,
 };
 
 const presets = [
@@ -87,7 +88,25 @@ const els = {
   responseStatus: document.querySelector('#responseStatus'),
   responseBody: document.querySelector('#responseBody'),
   copyResponseButton: document.querySelector('#copyResponseButton'),
+  copyRequestButton: document.querySelector('#copyRequestButton'),
   toast: document.querySelector('#toast'),
+  modal: document.querySelector('#scenarioModal'),
+  modalTitle: document.querySelector('#modalTitle'),
+  modalSubtitle: document.querySelector('#modalSubtitle'),
+  modalClose: document.querySelector('#modalClose'),
+  modalCancel: document.querySelector('#modalCancel'),
+  modalSave: document.querySelector('#modalSave'),
+  modalReset: document.querySelector('#modalReset'),
+  modalStatus: document.querySelector('#modalStatus'),
+  modalContentType: document.querySelector('#modalContentType'),
+  modalBody: document.querySelector('#modalBody'),
+  modalOverrideBadge: document.querySelector('#modalOverrideBadge'),
+};
+
+const modalState = {
+  provider: '',
+  scenario: '',
+  hasOverride: false,
 };
 
 function init() {
@@ -101,6 +120,17 @@ function bindEvents() {
   els.resetButton.addEventListener('click', resetState);
   els.probeForm.addEventListener('submit', sendProbe);
   els.copyResponseButton.addEventListener('click', copyResponse);
+  els.copyRequestButton.addEventListener('click', copyRequest);
+  els.modalClose.addEventListener('click', closeScenarioModal);
+  els.modalCancel.addEventListener('click', closeScenarioModal);
+  els.modalSave.addEventListener('click', saveScenarioOverride);
+  els.modalReset.addEventListener('click', clearScenarioOverride);
+  els.modal.addEventListener('click', (event) => {
+    if (event.target === els.modal) closeScenarioModal();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !els.modal.hidden) closeScenarioModal();
+  });
 }
 
 function renderPresetOptions() {
@@ -148,6 +178,9 @@ function renderProviders() {
   els.providersList.querySelectorAll('select[data-provider]').forEach((select) => {
     select.addEventListener('change', setProviderScenario);
   });
+  els.providersList.querySelectorAll('button.scenario-chip').forEach((button) => {
+    button.addEventListener('click', openScenarioModal);
+  });
 }
 
 function renderProvider(provider) {
@@ -157,14 +190,18 @@ function renderProvider(provider) {
     return `<option value="${escapeAttr(scenario)}" ${selected}>${escapeHTML(label)}</option>`;
   }).join('');
   const routeSummary = `${(provider.routes || []).length} routes, ${(provider.scenarios || []).length} scenarios`;
+  const scenarioChips = (provider.scenarios || []).map((scenario) =>
+    `<button class="scenario-chip" type="button" data-provider="${escapeAttr(provider.name)}" data-scenario="${escapeAttr(scenario)}">${escapeHTML(scenario)}</button>`
+  ).join('');
   return `
     <article class="provider-row">
-      <div>
+      <div class="provider-info">
         <div class="provider-title">
           <span>${escapeHTML(provider.name)}</span>
           <span class="status-pill ${provider.enabled ? 'success' : 'disabled'}">${provider.enabled ? 'enabled' : 'disabled'}</span>
         </div>
         <div class="provider-meta">${escapeHTML(routeSummary)}</div>
+        <div class="scenario-chips">${scenarioChips}</div>
       </div>
       <label class="scenario-control">
         Global scenario
@@ -221,6 +258,79 @@ async function setProviderScenario(event) {
   }
 }
 
+async function openScenarioModal(event) {
+  const button = event.currentTarget;
+  const provider = button.dataset.provider;
+  const scenario = button.dataset.scenario;
+  modalState.provider = provider;
+  modalState.scenario = scenario;
+  els.modalTitle.textContent = scenario;
+  els.modalSubtitle.textContent = `${provider} scenario`;
+  els.modalStatus.value = '';
+  els.modalContentType.value = '';
+  els.modalBody.value = 'Loading...';
+  els.modalSave.disabled = true;
+  els.modalReset.hidden = true;
+  els.modalOverrideBadge.hidden = true;
+  els.modal.hidden = false;
+  try {
+    const detail = await getJSON(`/__admin/providers/${encodeURIComponent(provider)}/scenarios/${encodeURIComponent(scenario)}`);
+    modalState.hasOverride = !!detail.hasOverride;
+    const source = detail.hasOverride && detail.overridden ? detail.overridden : detail;
+    els.modalStatus.value = source.status;
+    els.modalContentType.value = source.contentType;
+    els.modalBody.value = formatBody(source.body);
+    els.modalReset.hidden = !detail.hasOverride;
+    els.modalOverrideBadge.hidden = !detail.hasOverride;
+    els.modalSave.disabled = false;
+  } catch (error) {
+    els.modalBody.value = error.message;
+    showToast(error.message);
+  }
+}
+
+function closeScenarioModal() {
+  els.modal.hidden = true;
+}
+
+async function saveScenarioOverride() {
+  if (!modalState.provider || !modalState.scenario) return;
+  const payload = {};
+  const status = parseInt(els.modalStatus.value, 10);
+  if (Number.isFinite(status) && status > 0) payload.status = status;
+  const contentType = els.modalContentType.value.trim();
+  if (contentType) payload.contentType = contentType;
+  payload.body = els.modalBody.value;
+  els.modalSave.disabled = true;
+  try {
+    await putJSON(
+      `/__admin/providers/${encodeURIComponent(modalState.provider)}/scenarios/${encodeURIComponent(modalState.scenario)}`,
+      payload,
+    );
+    showToast(`${modalState.scenario} overridden`);
+    closeScenarioModal();
+    await loadState();
+  } catch (error) {
+    showToast(error.message);
+    els.modalSave.disabled = false;
+  }
+}
+
+async function clearScenarioOverride() {
+  if (!modalState.provider || !modalState.scenario) return;
+  els.modalReset.disabled = true;
+  try {
+    await deleteJSON(`/__admin/providers/${encodeURIComponent(modalState.provider)}/scenarios/${encodeURIComponent(modalState.scenario)}`);
+    showToast(`${modalState.scenario} restored to fixture`);
+    closeScenarioModal();
+    await loadState();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    els.modalReset.disabled = false;
+  }
+}
+
 async function resetState() {
   els.resetButton.disabled = true;
   try {
@@ -241,14 +351,17 @@ async function sendProbe(event) {
   const couponCode = els.couponCode.value.trim() || '0109760017002';
   const scenarioHeader = els.scenarioHeader.value;
   const path = typeof preset.path === 'function' ? preset.path({ couponCode }) : preset.path;
+  els.responseStatus.textContent = 'Sending request...';
   const headers = {};
   const options = { method: preset.method, headers };
   if (scenarioHeader) headers['X-Chaos-Scenario'] = scenarioHeader;
+  let bodyText = '';
   if (preset.body) {
     headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(preset.body({ couponCode }));
+    bodyText = JSON.stringify(preset.body({ couponCode }));
+    options.body = bodyText;
   }
-  els.responseStatus.textContent = 'Sending request...';
+  state.lastRequest = { method: preset.method, path, headers, body: bodyText };
   try {
     const started = performance.now();
     const res = await fetch(path, options);
@@ -274,6 +387,30 @@ async function copyResponse() {
   }
 }
 
+async function copyRequest() {
+  if (!state.lastRequest) {
+    showToast('No request yet');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(toCurl(state.lastRequest));
+    showToast('cURL copied');
+  } catch (error) {
+    showToast('Copy failed');
+  }
+}
+
+function toCurl(req) {
+  const parts = [`curl -sS -X ${req.method} 'http://127.0.0.1:18080${req.path}'`];
+  Object.entries(req.headers || {}).forEach(([key, value]) => {
+    parts.push(`  -H '${key}: ${value}'`);
+  });
+  if (req.body) {
+    parts.push(`  -d '${req.body.replace(/'/g, "'\\''")}'`);
+  }
+  return parts.join(' \\\n');
+}
+
 async function getJSON(path) {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`${path} returned HTTP ${res.status}`);
@@ -286,6 +423,15 @@ async function putJSON(path, body) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `${path} returned HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+async function deleteJSON(path) {
+  const res = await fetch(path, { method: 'DELETE' });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `${path} returned HTTP ${res.status}`);
