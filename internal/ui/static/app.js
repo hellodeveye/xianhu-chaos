@@ -18,6 +18,9 @@ const POLL_MS = 3000;
 // mirrors the rotating chevron on each route row.
 const ICON_EXPAND = '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4.5 8 9l5-4.5"/><path d="M3 9.5 8 14l5-4.5"/></svg>';
 const ICON_COLLAPSE = '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 11.5 8 7l5 4.5"/><path d="M3 6.5 8 2l5 4.5"/></svg>';
+const ICON_EDIT = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9.8 3.2 12.8 6.2"/><path d="M3 13l1-3.5 7-7a1.4 1.4 0 0 1 2 2l-7 7L3 13z"/></svg>';
+const ICON_PIN = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 2.5h6"/><path d="M6 2.5l-.7 4L3.5 8.3v1.2h9V8.3l-1.8-1.8-.7-4"/><path d="M8 9.5V14"/></svg>';
+const ICON_RESTORE = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.3 5.1A4.6 4.6 0 1 1 3.8 9"/><path d="M1.7 5.1h2.6V2.5"/></svg>';
 
 const presets = [
   {
@@ -425,18 +428,20 @@ function renderProviders() {
     return;
   }
   els.providersList.innerHTML = state.providers.map(renderProvider).join('');
-  els.providersList.querySelectorAll('select[data-provider]').forEach((select) => {
+  els.providersList.querySelectorAll('select[data-global-provider]').forEach((select) => {
     select.addEventListener('change', setProviderScenario);
   });
   els.providersList.querySelectorAll('button.group-toggle').forEach((button) => {
     button.addEventListener('click', toggleProviderGroups);
   });
   els.providersList.querySelectorAll('button.scenario-chip').forEach((button) => {
-    if (button.dataset.routeId) {
-      button.addEventListener('click', setRouteScenarioFromChip);
-    } else {
-      button.addEventListener('click', openScenarioModal);
-    }
+    button.addEventListener('click', openScenarioModal);
+  });
+  els.providersList.querySelectorAll('button.scenario-edit').forEach((button) => {
+    button.addEventListener('click', openScenarioModal);
+  });
+  els.providersList.querySelectorAll('button.route-scenario-toggle').forEach((button) => {
+    button.addEventListener('click', setRouteScenarioFromChip);
   });
   els.providersList.querySelectorAll('details.route-group').forEach((details) => {
     details.addEventListener('toggle', () => {
@@ -478,7 +483,7 @@ function renderProvider(provider) {
         </div>
         <label class="scenario-control">
           <span>Global scenario <span class="hint-mark" title="Only shared cross-cutting scenarios can be pinned globally. Route-specific scenarios stay under their owning route. Header and coupon-code rules still take precedence.">?</span></span>
-          <select data-provider="${escapeAttr(provider.name)}" ${provider.enabled ? '' : 'disabled'}>
+          <select data-global-provider="${escapeAttr(provider.name)}" ${provider.enabled ? '' : 'disabled'}>
             ${scenarioOptions}
           </select>
         </label>
@@ -539,13 +544,17 @@ function renderChip(providerName, scenario, options) {
   const opts = options || {};
   const defaultClass = opts.isDefault ? ' is-default' : '';
   const activeClass = opts.isActive ? ' is-active' : '';
-  const title = opts.routeId
-    ? ' title="Select route scenario"'
-    : (opts.isDefault ? ' title="Route default scenario"' : '');
-  const routeAttrs = opts.routeId
-    ? ` data-route-id="${escapeAttr(opts.routeId)}" data-default-scenario="${escapeAttr(opts.defaultScenario || '')}" data-active-scenario="${escapeAttr(opts.activeScenario || '')}"`
-    : '';
-  return `<button class="scenario-chip${defaultClass}${activeClass}" type="button" data-provider="${escapeAttr(providerName)}" data-scenario="${escapeAttr(scenario)}" data-name="${escapeAttr(scenario.toLowerCase())}"${routeAttrs}${title}>${escapeHTML(scenario)}</button>`;
+  const chipTitle = opts.isDefault ? 'Route default scenario; edit response override' : 'Edit response override';
+  const editButton = `<button class="scenario-action scenario-edit" type="button" data-provider="${escapeAttr(providerName)}" data-scenario="${escapeAttr(scenario)}" title="Edit response override" aria-label="${escapeAttr('Edit ' + scenario)}">${ICON_EDIT}</button>`;
+  let routeButton = '';
+  if (opts.routeId && (scenario !== opts.defaultScenario || opts.activeScenario)) {
+    const activeScenario = opts.activeScenario || '';
+    const restoresDefault = scenario === opts.defaultScenario || scenario === activeScenario;
+    const actionTitle = restoresDefault ? 'Restore route default' : 'Pin route scenario';
+    const actionIcon = restoresDefault ? ICON_RESTORE : ICON_PIN;
+    routeButton = `<button class="scenario-action route-scenario-toggle" type="button" data-provider="${escapeAttr(providerName)}" data-scenario="${escapeAttr(scenario)}" data-route-id="${escapeAttr(opts.routeId)}" data-default-scenario="${escapeAttr(opts.defaultScenario || '')}" data-active-scenario="${escapeAttr(activeScenario)}" title="${escapeAttr(actionTitle)}" aria-label="${escapeAttr(actionTitle + ': ' + scenario)}">${actionIcon}</button>`;
+  }
+  return `<span class="scenario-chip-wrap" data-name="${escapeAttr(scenario.toLowerCase())}"><button class="scenario-chip${defaultClass}${activeClass}" type="button" data-provider="${escapeAttr(providerName)}" data-scenario="${escapeAttr(scenario)}" title="${escapeAttr(chipTitle)}">${escapeHTML(scenario)}</button><span class="scenario-actions">${editButton}${routeButton}</span></span>`;
 }
 
 function methodClass(method) {
@@ -572,7 +581,7 @@ function applyProviderFilter() {
       const header = details.dataset.header || '';
       const headerHit = providerHit || (!!q && header.includes(q));
       let anyChip = false;
-      details.querySelectorAll('.scenario-chip').forEach((chip) => {
+      details.querySelectorAll('.scenario-chip-wrap').forEach((chip) => {
         const hit = !q || headerHit || (chip.dataset.name || '').includes(q);
         chip.classList.toggle('chip-hidden', !hit);
         if (hit) anyChip = true;
@@ -714,7 +723,7 @@ function formatQuery(query) {
 
 async function setProviderScenario(event) {
   const select = event.currentTarget;
-  const provider = select.dataset.provider;
+  const provider = select.dataset.globalProvider;
   select.disabled = true;
   try {
     await putJSON(`/__admin/providers/${encodeURIComponent(provider)}/scenario`, {
