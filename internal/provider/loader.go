@@ -91,16 +91,45 @@ func readFixture(manifestPath, fixture string) ([]byte, error) {
 }
 
 func validateManifest(manifest *Manifest) error {
+	routeIDs := make(map[string]struct{}, len(manifest.Routes))
 	for i, route := range manifest.Routes {
 		if route.ID == "" {
 			return fmt.Errorf("route[%d] missing id", i)
 		}
+		if _, exists := routeIDs[route.ID]; exists {
+			return fmt.Errorf("duplicate route id %q", route.ID)
+		}
+		routeIDs[route.ID] = struct{}{}
 		if route.Method == "" || route.Path == "" {
 			return fmt.Errorf("route %q missing method or path", route.ID)
 		}
 		manifest.Routes[i].Method = strings.ToUpper(route.Method)
 		if _, ok := manifest.Scenarios[route.DefaultScenario]; !ok {
 			return fmt.Errorf("route %q references missing default scenario %q", route.ID, route.DefaultScenario)
+		}
+	}
+	for name, scenario := range manifest.Scenarios {
+		hasRoute := scenario.RouteID != ""
+		hasScope := scenario.Scope != ""
+		switch {
+		case hasRoute && hasScope:
+			return fmt.Errorf("scenario %q cannot declare both routeId and scope", name)
+		case hasRoute:
+			if _, ok := routeIDs[scenario.RouteID]; !ok {
+				return fmt.Errorf("scenario %q references missing routeId %q", name, scenario.RouteID)
+			}
+		case hasScope:
+			if scenario.Scope != ScenarioScopeShared {
+				return fmt.Errorf("scenario %q has unknown scope %q", name, scenario.Scope)
+			}
+		default:
+			return fmt.Errorf("scenario %q missing routeId or scope", name)
+		}
+	}
+	for _, route := range manifest.Routes {
+		scenario := manifest.Scenarios[route.DefaultScenario]
+		if scenario.RouteID != route.ID {
+			return fmt.Errorf("route %q default scenario %q belongs to route %q", route.ID, route.DefaultScenario, scenario.RouteID)
 		}
 	}
 	for _, rule := range manifest.Rules {

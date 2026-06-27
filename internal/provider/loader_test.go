@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,4 +48,54 @@ func TestLoadRegistryFailsForMissingScenario(t *testing.T) {
 	if _, err := LoadRegistry(dir); err == nil {
 		t.Fatalf("expected missing scenario error")
 	}
+}
+
+func TestLoadRegistryFailsForScenarioWithoutOwner(t *testing.T) {
+	dir := t.TempDir()
+	fixture := writeFixture(t, dir)
+	if err := os.WriteFile(filepath.Join(dir, "broken.yaml"), []byte(fmt.Sprintf(`{
+		"name": "broken",
+		"enabled": true,
+		"routes": [{"id":"r","method":"GET","path":"/x","defaultScenario":"ok"}],
+		"scenarios": {
+			"ok": {"fixture": %q}
+		},
+		"rules": []
+	}`, fixture)), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadRegistry(dir); err == nil {
+		t.Fatalf("expected missing scenario owner error")
+	}
+}
+
+func TestLoadRegistryFailsForDefaultScenarioOwnedByAnotherRoute(t *testing.T) {
+	dir := t.TempDir()
+	fixture := writeFixture(t, dir)
+	if err := os.WriteFile(filepath.Join(dir, "broken.yaml"), []byte(fmt.Sprintf(`{
+		"name": "broken",
+		"enabled": true,
+		"routes": [
+			{"id":"a","method":"GET","path":"/a","defaultScenario":"a_ok"},
+			{"id":"b","method":"GET","path":"/b","defaultScenario":"a_ok"}
+		],
+		"scenarios": {
+			"a_ok": {"routeId": "a", "fixture": %q}
+		},
+		"rules": []
+	}`, fixture)), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadRegistry(dir); err == nil {
+		t.Fatalf("expected default scenario owner error")
+	}
+}
+
+func writeFixture(t *testing.T, dir string) string {
+	t.Helper()
+	path := filepath.Join(dir, "fixture.json")
+	if err := os.WriteFile(path, []byte(`{"ok":true}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }

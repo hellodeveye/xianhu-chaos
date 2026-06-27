@@ -55,7 +55,7 @@ func (s *Server) serveRoute(w http.ResponseWriter, r *http.Request, route provid
 	}
 	selection := s.engine.Select(r, route, body)
 	s.engine.ApplyDelay(selection.Scenario)
-	s.engine.Log(route, selection)
+	s.engine.Log(r, route, selection, body)
 	w.Header().Set("Content-Type", selection.Scenario.ContentType)
 	w.WriteHeader(selection.Scenario.Status)
 	_, _ = w.Write(selection.Scenario.Body)

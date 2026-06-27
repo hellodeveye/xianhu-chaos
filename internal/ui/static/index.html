@@ -4,19 +4,37 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>xianhu-chaos</title>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('xianhu-chaos-theme');
+        if (t !== 'dark' && t !== 'light') {
+          t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div>
+      <div class="topbar-title">
         <h1>xianhu-chaos</h1>
         <p>Provider scenarios, live requests, and quick probes for local third-party mocks.</p>
       </div>
+      <div class="topbar-stats" id="statsBar" aria-label="Mock platform stats">
+        <div class="stat"><span class="stat-value" id="statProviders">&mdash;</span><span class="stat-label">Providers</span></div>
+        <div class="stat"><span class="stat-value" id="statRoutes">&mdash;</span><span class="stat-label">Routes</span></div>
+        <div class="stat"><span class="stat-value" id="statScenarios">&mdash;</span><span class="stat-label">Scenarios</span></div>
+        <div class="stat"><span class="stat-value" id="statRequests">&mdash;</span><span class="stat-label">Requests</span></div>
+      </div>
       <div class="topbar-actions">
         <span id="healthBadge" class="status-pill neutral">checking</span>
+        <button id="themeToggle" class="icon-button" type="button" title="Toggle light / dark" aria-label="Toggle theme">&#127769;</button>
         <button id="refreshButton" class="button secondary" type="button">Refresh</button>
-        <button id="resetButton" class="button danger" type="button">Reset state</button>
+        <button id="resetButton" class="button danger" type="button" title="Clear all overrides, pinned scenarios, and captured traffic">Reset state</button>
       </div>
     </header>
 
@@ -25,40 +43,60 @@
         <div class="panel-header">
           <div>
             <h2 id="providersTitle">Providers</h2>
-            <p>Set provider-wide scenarios. Header and coupon-code rules still take precedence.</p>
+            <p>Scenarios grouped by route. Header and coupon-code rules still take precedence.</p>
           </div>
+        </div>
+        <div class="providers-toolbar">
+          <input id="providerFilter" type="search" placeholder="Filter by route or scenario..." autocomplete="off" aria-label="Filter routes or scenarios">
+          <span id="filterHint" class="filter-hint"></span>
         </div>
         <div id="providersList" class="providers-list skeleton-list" aria-live="polite"></div>
       </section>
 
-      <section class="panel probe-panel" aria-labelledby="probeTitle">        <div class="panel-header">
+      <section class="panel probe-panel" aria-labelledby="probeTitle">
+        <div class="panel-header">
           <div>
             <h2 id="probeTitle">Quick probe</h2>
             <p>Send common Umember and Douyin requests without leaving the console.</p>
           </div>
         </div>
         <form id="probeForm" class="probe-form">
-          <label>
-            Request
-            <select id="probePreset" name="preset"></select>
-          </label>
-          <label>
-            Code / token
-            <input id="couponCode" name="couponCode" value="0109760017002" autocomplete="off">
-          </label>
-          <label>
-            Scenario header
-            <select id="scenarioHeader" name="scenarioHeader">
-              <option value="">none</option>
-            </select>
-          </label>
-          <button class="button primary" type="submit">Send request</button>
+          <div class="probe-fields">
+            <label>
+              Provider
+              <select id="probeProvider" name="probeProvider"></select>
+            </label>
+            <label>
+              Request
+              <select id="probePreset" name="preset"></select>
+            </label>
+            <label>
+              Code / token
+              <input id="couponCode" name="couponCode" value="0109760017002" autocomplete="off">
+            </label>
+            <label>
+              Scenario header
+              <select id="scenarioHeader" name="scenarioHeader">
+                <option value="">none</option>
+              </select>
+            </label>
+          </div>
+          <div class="probe-bar" aria-label="Request preview">
+            <span id="probePreviewMethod" class="method-badge other">&mdash;</span>
+            <code id="probePreviewPath" class="probe-bar-path">&mdash;</code>
+            <button class="button primary probe-submit" type="submit">Send request</button>
+          </div>
         </form>
         <div class="response-block">
           <div class="response-meta">
-            <span id="responseStatus">No request yet</span>
-            <button id="copyRequestButton" class="text-button" type="button">Copy request</button>
-            <button id="copyResponseButton" class="text-button" type="button">Copy response</button>
+            <div class="response-meta-info">
+              <span id="responseCode" class="status-pill neutral">&mdash;</span>
+              <span id="responseStatus">No request yet</span>
+            </div>
+            <div class="response-meta-actions">
+              <button id="copyRequestButton" class="text-button" type="button">Copy cURL</button>
+              <button id="copyResponseButton" class="text-button" type="button">Copy response</button>
+            </div>
           </div>
           <pre id="responseBody">{}</pre>
         </div>
@@ -67,14 +105,23 @@
       <section class="panel log-panel" aria-labelledby="logTitle">
         <div class="panel-header">
           <div>
-            <h2 id="logTitle">Recent requests</h2>
-            <p>The latest mock traffic captured by the server.</p>
+            <h2 id="logTitle">Recent requests <span id="liveDot" class="live-dot"></span></h2>
+            <p>The latest mock traffic captured by the server. Click a row to inspect request and response.</p>
+          </div>
+          <div class="panel-header-actions">
+            <span class="count-badge" id="logCount">0</span>
+            <label class="switch">
+              <input type="checkbox" id="autoRefreshToggle" checked>
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+              <span class="switch-label">Auto-refresh</span>
+            </label>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
+                <th class="col-toggle" aria-hidden="true"></th>
                 <th>Time</th>
                 <th>Provider</th>
                 <th>Route</th>

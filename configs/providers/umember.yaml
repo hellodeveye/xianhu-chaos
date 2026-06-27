@@ -57,116 +57,143 @@
   "scenarios": {
     "login_success": {
       "status": 200,
+      "routeId": "login",
       "fixture": "fixtures/umember/login_success.json"
     },
     "login_http_500": {
       "status": 500,
+      "routeId": "login",
       "fixture": "fixtures/umember/http_500.json"
     },
     "login_business_fail": {
       "status": 200,
+      "routeId": "login",
       "fixture": "fixtures/umember/business_fail.json"
     },
     "login_bad_json": {
       "status": 200,
+      "routeId": "login",
       "fixture": "fixtures/umember/bad_json.txt",
       "contentType": "application/json"
     },
     "login_missing_token": {
       "status": 200,
+      "routeId": "login",
       "fixture": "fixtures/umember/login_missing_token.json"
     },
     "detail_success": {
       "status": 200,
+      "routeId": "meituan_coupon_detail",
       "fixture": "fixtures/umember/detail_success.json"
     },
     "detail_http_500": {
       "status": 500,
+      "routeId": "meituan_coupon_detail",
       "fixture": "fixtures/umember/http_500.json"
     },
     "detail_business_fail": {
       "status": 200,
+      "routeId": "meituan_coupon_detail",
       "fixture": "fixtures/umember/business_fail.json"
     },
     "detail_bad_json": {
       "status": 200,
+      "routeId": "meituan_coupon_detail",
       "fixture": "fixtures/umember/bad_json.txt",
       "contentType": "application/json"
     },
     "detail_missing_data": {
       "status": 200,
+      "routeId": "meituan_coupon_detail",
       "fixture": "fixtures/umember/detail_missing_data.json"
     },
     "detail_missing_payment": {
       "status": 200,
+      "routeId": "meituan_coupon_detail",
       "fixture": "fixtures/umember/detail_missing_payment.json"
     },
     "detail_unknown_sku": {
       "status": 200,
+      "routeId": "meituan_coupon_detail",
       "fixture": "fixtures/umember/detail_unknown_sku.json"
     },
     "verify_success": {
       "status": 200,
+      "routeId": "meituan_coupon_verify",
       "fixture": "fixtures/umember/verify_success.json"
     },
     "verify_http_500": {
       "status": 500,
+      "routeId": "meituan_coupon_verify",
       "fixture": "fixtures/umember/http_500.json"
     },
     "verify_business_fail": {
       "status": 200,
+      "routeId": "meituan_coupon_verify",
       "fixture": "fixtures/umember/business_fail.json"
     },
     "verify_false": {
       "status": 200,
+      "routeId": "meituan_coupon_verify",
       "fixture": "fixtures/umember/verify_false.json"
     },
     "verify_bad_json": {
       "status": 200,
+      "routeId": "meituan_coupon_verify",
       "fixture": "fixtures/umember/bad_json.txt",
       "contentType": "application/json"
     },
     "verify_missing_consume_details": {
       "status": 200,
+      "routeId": "meituan_coupon_verify",
       "fixture": "fixtures/umember/verify_missing_consume_details.json"
     },
     "store_list_success": {
       "status": 200,
+      "routeId": "meituan_store_list",
       "fixture": "fixtures/umember/store_list_success.json"
     },
     "account_success": {
       "status": 200,
+      "routeId": "user_detail",
       "fixture": "fixtures/umember/account_success.json"
     },
     "qr_code_success": {
       "status": 200,
+      "routeId": "meituan_auth_qr_code",
       "fixture": "fixtures/umember/qr_code_success.json"
     },
     "request_logs_success": {
       "status": 200,
+      "routeId": "request_logs",
       "fixture": "fixtures/umember/request_logs_success.json"
     },
     "order_create_success": {
       "status": 200,
+      "routeId": "order_count_create",
       "fixture": "fixtures/umember/order_create_success.json"
     },
     "slow_2s": {
       "status": 200,
+      "scope": "shared",
       "fixture": "fixtures/umember/detail_success.json",
       "delayMs": 2000
     },
     "jitter": {
       "status": 200,
+      "scope": "shared",
       "fixture": "fixtures/umember/detail_success.json",
       "jitterMs": 800
     },
     "random_http_500": {
       "status": 500,
+      "scope": "shared",
       "fixture": "fixtures/umember/http_500.json",
       "errorRate": 0.5
     },
     "third_request_http_500": {
       "status": 500,
+      "scope": "shared",
       "fixture": "fixtures/umember/http_500.json",
       "failOnNth": 3
     }

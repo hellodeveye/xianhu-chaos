@@ -54,6 +54,10 @@ func (h *Handler) state(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) setProviderScenario(w http.ResponseWriter, r *http.Request) {
 	trimmed := strings.TrimPrefix(r.URL.Path, "/__admin/providers/")
+	if strings.Contains(trimmed, "/routes/") {
+		h.setRouteScenario(w, r, trimmed)
+		return
+	}
 	providerName, ok := strings.CutSuffix(trimmed, "/scenario")
 	if !ok || providerName == "" {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "admin path not found"})
@@ -67,11 +71,40 @@ func (h *Handler) setProviderScenario(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if ok := h.engine.SetGlobalScenario(providerName, req.Scenario); !ok {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "unknown provider or scenario"})
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "unknown provider or global scenario"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"provider": providerName,
+		"scenario": req.Scenario,
+	})
+}
+
+func (h *Handler) setRouteScenario(w http.ResponseWriter, r *http.Request, trimmed string) {
+	before, after, ok := strings.Cut(trimmed, "/routes/")
+	if !ok || before == "" {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "admin path not found"})
+		return
+	}
+	routeID, ok := strings.CutSuffix(after, "/scenario")
+	if !ok || routeID == "" {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "admin path not found"})
+		return
+	}
+	var req struct {
+		Scenario string `json:"scenario"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid json body"})
+		return
+	}
+	if ok := h.engine.SetRouteScenario(before, routeID, req.Scenario); !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "unknown provider, route, or route scenario"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"provider": before,
+		"routeId":  routeID,
 		"scenario": req.Scenario,
 	})
 }

@@ -68,13 +68,15 @@ configs/providers/*.yaml
 The files use a JSON-compatible YAML subset so the service can run without external parser dependencies. A provider declares:
 
 - `routes`: HTTP method, path, default scenario, and optional coupon-code field.
-- `scenarios`: HTTP status, fixture path, content type, and chaos options.
+- `scenarios`: explicit owner (`routeId` or `scope: "shared"`), HTTP status, fixture path, content type, and chaos options.
 - `rules`: coupon-code or header matches that map requests to scenarios.
 
 Startup validation fails fast when:
 
 - a fixture is missing
 - a route references an unknown scenario
+- a scenario omits ownership, declares both `routeId` and `scope`, uses an unknown `routeId`, or uses a scope other than `shared`
+- a route's default scenario is not owned by that route
 - a rule references an unknown scenario
 - two enabled providers register the same `method + path`
 
@@ -82,10 +84,11 @@ Startup validation fails fast when:
 
 The selected scenario is resolved in this order:
 
-1. Request header `X-Chaos-Scenario`
-2. Coupon-code rules in the provider manifest
-3. Provider global scenario set by admin API
-4. Route default scenario
+1. Request header `X-Chaos-Scenario` when the named scenario is owned by the current route or is shared
+2. Coupon-code rules in the provider manifest when the matched scenario is owned by the current route or is shared
+3. Route scenario set by admin API
+4. Provider shared global scenario set by admin API
+5. Route default scenario
 
 ## Common Examples
 
@@ -148,12 +151,28 @@ curl -i 'http://127.0.0.1:18080/open/user/meituan/coupon/detail?store_id=8674228
   -H 'X-Chaos-Scenario: detail_bad_json'
 ```
 
-Set a provider-wide global scenario:
+Set a provider-wide shared global scenario:
 
 ```bash
 curl -sS -X PUT http://127.0.0.1:18080/__admin/providers/umember/scenario \
   -H 'Content-Type: application/json' \
+  -d '{"scenario":"random_http_500"}'
+```
+
+Pin one route to one of its own scenarios:
+
+```bash
+curl -sS -X PUT http://127.0.0.1:18080/__admin/providers/umember/routes/login/scenario \
+  -H 'Content-Type: application/json' \
   -d '{"scenario":"login_http_500"}'
+```
+
+Clear a route scenario:
+
+```bash
+curl -sS -X PUT http://127.0.0.1:18080/__admin/providers/umember/routes/login/scenario \
+  -H 'Content-Type: application/json' \
+  -d '{"scenario":""}'
 ```
 
 Reset state:

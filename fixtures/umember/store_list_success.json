@@ -5,12 +5,14 @@
     {
       "store_id": 8674228,
       "store_name": "大声發(20号店)",
-      "coupon_channel": "meituan"
+      "coupon_channel": "meituan",
+      "request_count":9999
     },
     {
       "store_id": 8676210,
       "store_name": "大声發(21号店)",
-      "coupon_channel": "meituan"
+      "coupon_channel": "meituan",
+      "request_count":9999
     }
   ],
   "count": 2,

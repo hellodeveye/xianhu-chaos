@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -27,11 +28,17 @@ type overrideKey struct {
 	Scenario string
 }
 
+type routeKey struct {
+	Provider string
+	RouteID  string
+}
+
 type Engine struct {
 	registry    *provider.Registry
 	logLimit    int
 	mu          sync.Mutex
 	global      map[string]string
+	route       map[routeKey]string
 	counts      map[string]int64
 	recent      []RequestLog
 	perProvider map[string]ProviderState
@@ -39,22 +46,40 @@ type Engine struct {
 }
 
 type ProviderState struct {
-	Name           string   `json:"name"`
-	Enabled        bool     `json:"enabled"`
-	GlobalScenario string   `json:"globalScenario,omitempty"`
-	Routes         []string `json:"routes"`
-	Scenarios      []string `json:"scenarios"`
+	Name            string               `json:"name"`
+	Enabled         bool                 `json:"enabled"`
+	GlobalScenario  string               `json:"globalScenario,omitempty"`
+	Routes          []string             `json:"routes"`
+	Scenarios       []string             `json:"scenarios"`
+	RouteGroups     []RouteScenarioGroup `json:"routeGroups"`
+	SharedScenarios []string             `json:"sharedScenarios"`
+}
+
+// RouteScenarioGroup bundles a route with the scenarios that belong to it, so
+// the UI can present scenarios grouped under their owning route instead of one
+// flat list.
+type RouteScenarioGroup struct {
+	RouteID         string   `json:"routeId"`
+	Method          string   `json:"method"`
+	Path            string   `json:"path"`
+	DefaultScenario string   `json:"defaultScenario"`
+	ActiveScenario  string   `json:"activeScenario,omitempty"`
+	Scenarios       []string `json:"scenarios"`
 }
 
 type RequestLog struct {
-	Time     string `json:"time"`
-	Provider string `json:"provider"`
-	RouteID  string `json:"routeId"`
-	Method   string `json:"method"`
-	Path     string `json:"path"`
-	Code     string `json:"code,omitempty"`
-	Scenario string `json:"scenario"`
-	Status   int    `json:"status"`
+	Time         string `json:"time"`
+	Provider     string `json:"provider"`
+	RouteID      string `json:"routeId"`
+	Method       string `json:"method"`
+	Path         string `json:"path"`
+	Query        string `json:"query,omitempty"`
+	RequestBody  string `json:"requestBody,omitempty"`
+	Code         string `json:"code,omitempty"`
+	Scenario     string `json:"scenario"`
+	Status       int    `json:"status"`
+	ContentType  string `json:"contentType,omitempty"`
+	ResponseBody string `json:"responseBody,omitempty"`
 }
 
 type Selection struct {
@@ -86,6 +111,7 @@ func New(reg *provider.Registry, logLimit int) *Engine {
 		registry:    reg,
 		logLimit:    logLimit,
 		global:      make(map[string]string),
+		route:       make(map[routeKey]string),
 		counts:      make(map[string]int64),
 		perProvider: make(map[string]ProviderState),
 		overrides:   make(map[overrideKey]Override),
@@ -103,14 +129,22 @@ func (e *Engine) Select(r *http.Request, route provider.Route, body []byte) Sele
 
 	selected := false
 	if requested := strings.TrimSpace(r.Header.Get(ScenarioHeader)); requested != "" {
-		if _, ok := manifest.Scenarios[requested]; ok {
+		if scenario, ok := manifest.Scenarios[requested]; ok && scenarioAppliesToRoute(scenario, route) {
 			scenarioName = requested
 			selected = true
 		}
 	}
 	if !selected {
 		if matched := matchRule(r, manifest.Rules, code); matched != "" {
-			scenarioName = matched
+			if scenarioAppliesToRoute(manifest.Scenarios[matched], route) {
+				scenarioName = matched
+				selected = true
+			}
+		}
+	}
+	if !selected {
+		if routeScenario := e.RouteScenario(route.Provider, route.ID); routeScenario != "" {
+			scenarioName = routeScenario
 			selected = true
 		}
 	}
@@ -158,18 +192,22 @@ func (e *Engine) ApplyDelay(s provider.Scenario) {
 	}
 }
 
-func (e *Engine) Log(route provider.Route, sel Selection) {
+func (e *Engine) Log(r *http.Request, route provider.Route, sel Selection, requestBody []byte) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	entry := RequestLog{
-		Time:     time.Now().Format(time.RFC3339),
-		Provider: route.Provider,
-		RouteID:  route.ID,
-		Method:   route.Method,
-		Path:     route.Path,
-		Code:     sel.Code,
-		Scenario: sel.ScenarioName,
-		Status:   sel.Scenario.Status,
+		Time:         time.Now().Format(time.RFC3339),
+		Provider:     route.Provider,
+		RouteID:      route.ID,
+		Method:       route.Method,
+		Path:         route.Path,
+		Query:        r.URL.RawQuery,
+		RequestBody:  string(requestBody),
+		Code:         sel.Code,
+		Scenario:     sel.ScenarioName,
+		Status:       sel.Scenario.Status,
+		ContentType:  sel.Scenario.ContentType,
+		ResponseBody: string(sel.Scenario.Body),
 	}
 	e.recent = append(e.recent, entry)
 	if len(e.recent) > e.logLimit {
@@ -182,12 +220,15 @@ func (e *Engine) ProviderStates() []ProviderState {
 	defer e.mu.Unlock()
 	states := make([]ProviderState, 0, len(e.registry.Providers))
 	for name, manifest := range e.registry.Providers {
+		groups, shared := groupRouteScenarios(manifest, e.route, name)
 		state := ProviderState{
-			Name:           name,
-			Enabled:        manifest.Enabled,
-			GlobalScenario: e.global[name],
-			Routes:         make([]string, 0, len(manifest.Routes)),
-			Scenarios:      make([]string, 0, len(manifest.Scenarios)),
+			Name:            name,
+			Enabled:         manifest.Enabled,
+			GlobalScenario:  e.global[name],
+			Routes:          make([]string, 0, len(manifest.Routes)),
+			Scenarios:       make([]string, 0, len(manifest.Scenarios)),
+			RouteGroups:     groups,
+			SharedScenarios: shared,
 		}
 		for _, route := range manifest.Routes {
 			state.Routes = append(state.Routes, route.Method+" "+route.Path)
@@ -195,9 +236,49 @@ func (e *Engine) ProviderStates() []ProviderState {
 		for scenario := range manifest.Scenarios {
 			state.Scenarios = append(state.Scenarios, scenario)
 		}
+		sort.Strings(state.Routes)
+		sort.Strings(state.Scenarios)
 		states = append(states, state)
 	}
+	sort.Slice(states, func(i, j int) bool { return states[i].Name < states[j].Name })
 	return states
+}
+
+// groupRouteScenarios assigns each scenario to its explicit manifest owner:
+// either a route via routeId, or the shared bucket via scope: "shared".
+func groupRouteScenarios(manifest *provider.Manifest, active map[routeKey]string, providerName string) ([]RouteScenarioGroup, []string) {
+	names := make([]string, 0, len(manifest.Scenarios))
+	for name := range manifest.Scenarios {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	groups := make([]RouteScenarioGroup, len(manifest.Routes))
+	routeIndex := make(map[string]int, len(manifest.Routes))
+	for i, route := range manifest.Routes {
+		groups[i] = RouteScenarioGroup{
+			RouteID:         route.ID,
+			Method:          route.Method,
+			Path:            route.Path,
+			DefaultScenario: route.DefaultScenario,
+			ActiveScenario:  active[routeKey{providerName, route.ID}],
+			Scenarios:       []string{},
+		}
+		routeIndex[route.ID] = i
+	}
+
+	shared := []string{}
+	for _, name := range names {
+		scenario := manifest.Scenarios[name]
+		if scenario.Scope == provider.ScenarioScopeShared {
+			shared = append(shared, name)
+			continue
+		}
+		if idx, ok := routeIndex[scenario.RouteID]; ok {
+			groups[idx].Scenarios = append(groups[idx].Scenarios, name)
+		}
+	}
+	return groups, shared
 }
 
 func (e *Engine) ScenarioDetail(providerName, scenarioName string) (ScenarioDetail, bool) {
@@ -247,6 +328,12 @@ func (e *Engine) GlobalScenario(providerName string) string {
 	return e.global[providerName]
 }
 
+func (e *Engine) RouteScenario(providerName, routeID string) string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.route[routeKey{providerName, routeID}]
+}
+
 func (e *Engine) SetGlobalScenario(providerName, scenarioName string) bool {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -261,8 +348,54 @@ func (e *Engine) SetGlobalScenario(providerName, scenarioName string) bool {
 	if _, ok := manifest.Scenarios[scenarioName]; !ok {
 		return false
 	}
+	if !isSharedScenario(manifest.Scenarios[scenarioName]) {
+		return false
+	}
 	e.global[providerName] = scenarioName
 	return true
+}
+
+func (e *Engine) SetRouteScenario(providerName, routeID, scenarioName string) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	manifest, ok := e.registry.Providers[providerName]
+	if !ok {
+		return false
+	}
+	if !manifestHasRoute(manifest, routeID) {
+		return false
+	}
+	key := routeKey{providerName, routeID}
+	if scenarioName == "" {
+		delete(e.route, key)
+		return true
+	}
+	scenario, ok := manifest.Scenarios[scenarioName]
+	if !ok {
+		return false
+	}
+	if scenario.RouteID != routeID {
+		return false
+	}
+	e.route[key] = scenarioName
+	return true
+}
+
+func manifestHasRoute(manifest *provider.Manifest, routeID string) bool {
+	for _, route := range manifest.Routes {
+		if route.ID == routeID {
+			return true
+		}
+	}
+	return false
+}
+
+func scenarioAppliesToRoute(scenario provider.Scenario, route provider.Route) bool {
+	return isSharedScenario(scenario) || scenario.RouteID == route.ID
+}
+
+func isSharedScenario(scenario provider.Scenario) bool {
+	return scenario.Scope == provider.ScenarioScopeShared
 }
 
 func (e *Engine) GetOverride(providerName, scenarioName string) (Override, bool) {
@@ -312,6 +445,7 @@ func (e *Engine) Reset() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.global = make(map[string]string)
+	e.route = make(map[routeKey]string)
 	e.counts = make(map[string]int64)
 	e.recent = nil
 	e.overrides = make(map[overrideKey]Override)

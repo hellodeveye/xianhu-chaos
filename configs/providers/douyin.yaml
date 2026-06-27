@@ -27,103 +27,127 @@
   "scenarios": {
     "token_success": {
       "status": 200,
+      "routeId": "client_token",
       "fixture": "fixtures/douyin/token_success.json"
     },
     "token_http_500": {
       "status": 500,
+      "routeId": "client_token",
       "fixture": "fixtures/douyin/http_500.json"
     },
     "token_business_fail": {
       "status": 200,
+      "routeId": "client_token",
       "fixture": "fixtures/douyin/token_business_fail.json"
     },
     "token_bad_json": {
       "status": 200,
+      "routeId": "client_token",
       "fixture": "fixtures/douyin/bad_json.txt",
       "contentType": "application/json"
     },
     "prepare_success": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/prepare_success.json"
     },
     "prepare_http_500": {
       "status": 500,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/http_500.json"
     },
     "prepare_business_fail": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/prepare_business_fail.json"
     },
     "prepare_bad_json": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/bad_json.txt",
       "contentType": "application/json"
     },
     "prepare_empty_certificates": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/prepare_empty_certificates.json"
     },
     "prepare_missing_data": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/missing_data.json"
     },
     "prepare_unknown_sku": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/prepare_unknown_sku.json"
     },
     "prepare_verify_fail_token": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/prepare_verify_fail_token.json"
     },
     "prepare_verify_500_token": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/prepare_verify_500_token.json"
     },
     "prepare_verify_bad_json_token": {
       "status": 200,
+      "routeId": "certificate_prepare",
       "fixture": "fixtures/douyin/prepare_verify_bad_json_token.json"
     },
     "verify_success": {
       "status": 200,
+      "routeId": "certificate_verify",
       "fixture": "fixtures/douyin/verify_success.json"
     },
     "verify_http_500": {
       "status": 500,
+      "routeId": "certificate_verify",
       "fixture": "fixtures/douyin/http_500.json"
     },
     "verify_business_fail": {
       "status": 200,
+      "routeId": "certificate_verify",
       "fixture": "fixtures/douyin/verify_business_fail.json"
     },
     "verify_failed": {
       "status": 200,
+      "routeId": "certificate_verify",
       "fixture": "fixtures/douyin/verify_failed.json"
     },
     "verify_refunding": {
       "status": 200,
+      "routeId": "certificate_verify",
       "fixture": "fixtures/douyin/verify_refunding.json"
     },
     "verify_empty_results": {
       "status": 200,
+      "routeId": "certificate_verify",
       "fixture": "fixtures/douyin/verify_empty_results.json"
     },
     "verify_bad_json": {
       "status": 200,
+      "routeId": "certificate_verify",
       "fixture": "fixtures/douyin/bad_json.txt",
       "contentType": "application/json"
     },
     "slow_2s": {
       "status": 200,
+      "scope": "shared",
       "fixture": "fixtures/douyin/prepare_success.json",
       "delayMs": 2000
     },
     "random_http_500": {
       "status": 500,
+      "scope": "shared",
       "fixture": "fixtures/douyin/http_500.json",
       "errorRate": 0.5
     },
     "third_request_http_500": {
       "status": 500,
+      "scope": "shared",
       "fixture": "fixtures/douyin/http_500.json",
       "failOnNth": 3
     }

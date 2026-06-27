@@ -1,5 +1,7 @@
 package provider
 
+const ScenarioScopeShared = "shared"
+
 type Manifest struct {
 	Name      string              `json:"name"`
 	Enabled   bool                `json:"enabled"`
@@ -22,6 +24,8 @@ type Scenario struct {
 	Status      int     `json:"status"`
 	Fixture     string  `json:"fixture"`
 	ContentType string  `json:"contentType"`
+	RouteID     string  `json:"routeId"`
+	Scope       string  `json:"scope"`
 	DelayMS     int     `json:"delayMs"`
 	JitterMS    int     `json:"jitterMs"`
 	ErrorRate   float64 `json:"errorRate"`

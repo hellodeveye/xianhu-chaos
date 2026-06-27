@@ -81,6 +81,51 @@ func TestWebUIAssets(t *testing.T) {
 	}
 }
 
+func TestRecentRequestsIncludeRequestAndResponseDetails(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	resp, err := http.Post(ts.URL+"/open/login", "application/json", strings.NewReader(`{"email":"test@example.com","password":"test"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	stateResp, err := http.Get(ts.URL + "/__admin/state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stateResp.Body.Close()
+	var state struct {
+		RecentRequests []struct {
+			Method       string `json:"method"`
+			Path         string `json:"path"`
+			RequestBody  string `json:"requestBody"`
+			ContentType  string `json:"contentType"`
+			ResponseBody string `json:"responseBody"`
+		} `json:"recentRequests"`
+	}
+	if err := json.NewDecoder(stateResp.Body).Decode(&state); err != nil {
+		t.Fatal(err)
+	}
+	if len(state.RecentRequests) != 1 {
+		t.Fatalf("recent request count = %d, want 1", len(state.RecentRequests))
+	}
+	entry := state.RecentRequests[0]
+	if entry.Method != http.MethodPost || entry.Path != "/open/login" {
+		t.Fatalf("unexpected recent request route: %+v", entry)
+	}
+	if !strings.Contains(entry.RequestBody, `"email":"test@example.com"`) {
+		t.Fatalf("request body not logged: %q", entry.RequestBody)
+	}
+	if entry.ContentType != "application/json" {
+		t.Fatalf("content type = %q, want application/json", entry.ContentType)
+	}
+	if !strings.Contains(entry.ResponseBody, "chaos-mock-token") {
+		t.Fatalf("response body not logged: %q", entry.ResponseBody)
+	}
+}
+
 func TestCouponCodeRuleSelectsVerifyFalse(t *testing.T) {
 	ts := newTestServer(t)
 	defer ts.Close()
@@ -113,6 +158,41 @@ func TestHeaderScenarioTakesPrecedence(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	if !strings.Contains(string(body), `{"code":10000,"msg":"broken"`) {
 		t.Fatalf("header scenario not selected: %s", body)
+	}
+}
+
+func TestHeaderScenarioMustBelongToCurrentRouteOrShared(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/open/login", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set(chaos.ScenarioHeader, "detail_bad_json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(body), "chaos-mock-token") {
+		t.Fatalf("route-incompatible header scenario should be ignored: %s", body)
+	}
+}
+
+func TestCouponRuleScenarioMustBelongToCurrentRouteOrShared(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	resp, err := http.Post(ts.URL+"/open/user/meituan/coupon/verify", "application/json", strings.NewReader(`{"store_id":"8674228","coupon_code":"DETAIL_500"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"verify_success": true`) {
+		t.Fatalf("route-incompatible coupon rule should be ignored, status=%d body=%s", resp.StatusCode, body)
 	}
 }
 
@@ -159,7 +239,7 @@ func TestDouyinPrepareRuleCanDriveVerifyFailure(t *testing.T) {
 	}
 }
 
-func TestAdminSetsGlobalScenario(t *testing.T) {
+func TestAdminGlobalScenarioAllowsOnlySharedScenarios(t *testing.T) {
 	ts := newTestServer(t)
 	defer ts.Close()
 
@@ -173,8 +253,99 @@ func TestAdminSetsGlobalScenario(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("route-specific global scenario status = %d, want 400", resp.StatusCode)
+	}
+
+	req, err = http.NewRequest(http.MethodPut, ts.URL+"/__admin/providers/umember/scenario", strings.NewReader(`{"scenario":"random_http_500"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("admin status = %d", resp.StatusCode)
+		t.Fatalf("shared global scenario status = %d, want 200", resp.StatusCode)
+	}
+
+	resp, err = http.Get(ts.URL + "/__admin/state")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var state struct {
+		Providers []struct {
+			Name           string `json:"name"`
+			GlobalScenario string `json:"globalScenario"`
+		} `json:"providers"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&state); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range state.Providers {
+		if p.Name == "umember" && p.GlobalScenario == "random_http_500" {
+			return
+		}
+	}
+	t.Fatalf("umember global scenario not persisted in state: %+v", state.Providers)
+}
+
+func TestAdminSetsRouteScenario(t *testing.T) {
+	ts := newTestServer(t)
+	defer ts.Close()
+
+	req, err := http.NewRequest(http.MethodPut, ts.URL+"/__admin/providers/umember/routes/login/scenario", strings.NewReader(`{"scenario":"detail_http_500"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("other route scenario status = %d, want 400", resp.StatusCode)
+	}
+
+	req, err = http.NewRequest(http.MethodPut, ts.URL+"/__admin/providers/umember/routes/login/scenario", strings.NewReader(`{"scenario":"login_http_500"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("route scenario status = %d, want 200", resp.StatusCode)
+	}
+
+	resp, err = http.Post(ts.URL+"/open/login", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("login status after route scenario = %d, want 500", resp.StatusCode)
+	}
+
+	req, err = http.NewRequest(http.MethodPut, ts.URL+"/__admin/providers/umember/routes/login/scenario", strings.NewReader(`{"scenario":""}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("clear route scenario status = %d, want 200", resp.StatusCode)
 	}
 
 	resp, err = http.Post(ts.URL+"/open/login", "application/json", strings.NewReader(`{}`))
@@ -182,8 +353,8 @@ func TestAdminSetsGlobalScenario(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusInternalServerError {
-		t.Fatalf("login status after global scenario = %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("login status after route scenario clear = %d, want 200", resp.StatusCode)
 	}
 }
 
